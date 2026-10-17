@@ -50,3 +50,8 @@ describe('mergeIntoExisting', () => {
     expect(mergeIntoExisting([], [parsed('s1'), parsed('s1')], newId).created).toHaveLength(1);
   });
 });
+
+test('two identical payments with different sms ids stay separate', () => {
+  const { created } = mergeIntoExisting([], [parsed('s1'), parsed('s2')], newId);
+  expect(created.map((t) => t.id)).toEqual(['t1', 't2']);
+});

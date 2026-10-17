@@ -13,9 +13,9 @@ export const repo = {
   async upsertTransactions(txns: Transaction[]) {
     if (txns.length === 0) return;
     const db = await getDb();
-    await db.withTransactionAsync(async () => {
+    await db.withExclusiveTransactionAsync(async (txn) => {
       for (const t of txns) {
-        await db.runAsync('INSERT OR REPLACE INTO transactions (id, occurred_at, data) VALUES (?, ?, ?)', [
+        await txn.runAsync('INSERT OR REPLACE INTO transactions (id, occurred_at, data) VALUES (?, ?, ?)', [
           t.id,
           t.occurredAt,
           JSON.stringify(t),

@@ -4,7 +4,7 @@ import { readInbox } from '../../modules/sms-reader';
 import { repo } from '@/db/repo';
 import { mergeIntoExisting } from '@/domain/ingest';
 import { parseSms } from '@/domain/parseSms';
-import { scanSince } from '@/domain/scanWindow';
+import { nextCheckpoint, scanSince } from '@/domain/scanWindow';
 import type { ParsedTxn } from '@/domain/types';
 
 let running: Promise<{ added: number }> | null = null;
@@ -22,7 +22,7 @@ async function ingest() {
 
   const { created, updated } = mergeIntoExisting(await repo.allTransactions(), parsed, randomUUID);
   await repo.upsertTransactions([...created, ...updated]);
-  await repo.setMeta('lastSmsAt', String(Math.max(...inbox.map((s) => s.receivedAt))));
+  await repo.setMeta('lastSmsAt', String(nextCheckpoint(inbox.map((s) => s.receivedAt), Date.now())));
   return { added: created.length };
 }
 
