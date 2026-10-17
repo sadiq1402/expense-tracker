@@ -40,9 +40,10 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "build:apk": "expo prebuild -p android --no-install && cd android && ./gradlew assembleRelease"
   },
   "private": true,
   "jest": {

@@ -1,0 +1,9 @@
+expo.modules.smsreader.sms-reader-pngs-0 /mnt/storage/expense-tracker/modules/sms-reader/android/build/generated/res/pngs/release
+expo.modules.smsreader.sms-reader-updated_navigation_xml-1 /mnt/storage/expense-tracker/modules/sms-reader/android/build/generated/updated_navigation_xml/release
+expo.modules.smsreader.sms-reader-mergeReleaseResources-2 /mnt/storage/expense-tracker/modules/sms-reader/android/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+expo.modules.smsreader.sms-reader-mergeReleaseResources-3 /mnt/storage/expense-tracker/modules/sms-reader/android/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+expo.modules.smsreader.sms-reader-release-4 /mnt/storage/expense-tracker/modules/sms-reader/android/build/intermediates/merged_res/release/mergeReleaseResources
+expo.modules.smsreader.sms-reader-release-5 /mnt/storage/expense-tracker/modules/sms-reader/android/build/intermediates/packaged_res/release/packageReleaseResources
+expo.modules.smsreader.sms-reader-main-6 /mnt/storage/expense-tracker/modules/sms-reader/android/src/main/res
+expo.modules.smsreader.sms-reader-release-7 /mnt/storage/expense-tracker/modules/sms-reader/android/src/release/res
+gradleHome-0 /home/sadiq/.gradle
