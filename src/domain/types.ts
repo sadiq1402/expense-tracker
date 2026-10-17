@@ -24,3 +24,16 @@ export type ParseResult =
   | { kind: 'transaction'; txn: ParsedTxn }
   | { kind: 'needs_review'; sms: RawSms; reason: string }
   | { kind: 'ignored' };
+
+export interface Transaction extends ParsedTxn {
+  id: string;
+  sourceSmsIds: string[];
+  categoryId: string | null;
+  note: string | null;
+  isSelfTransfer: boolean;
+  selfTransferManual: boolean;
+  isExcluded: boolean;
+  isRefund: boolean;
+  isCash: boolean;
+  accountId: string | null;
+}
