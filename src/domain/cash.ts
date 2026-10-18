@@ -1,4 +1,4 @@
-import { rupeesToPaise } from '@/domain/format';
+import { formatRupees, rupeesToPaise } from '@/domain/format';
 import type { Transaction } from '@/domain/types';
 
 const MIDDAY_MS = 12 * 60 * 60_000;
@@ -39,4 +39,8 @@ export function newCashTransaction(input: CashInput, newId: () => string): Trans
     isCash: true,
     accountId: null,
   };
+}
+
+export function cashSaveLabel(paise: number | null): string {
+  return paise ? `Save ${formatRupees(paise)}` : 'Save';
 }

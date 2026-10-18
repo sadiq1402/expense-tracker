@@ -1,7 +1,7 @@
 import { spendByCategory } from '@/domain/aggregate';
-import { newCashTransaction } from '@/domain/cash';
+import { cashSaveLabel, newCashTransaction } from '@/domain/cash';
 import { rangeFor } from '@/domain/dateRange';
-import { merchantLabel } from '@/domain/format';
+import { merchantLabel, rupeesToPaise } from '@/domain/format';
 
 const ist = (iso: string) => Date.parse(`${iso}+05:30`);
 const OCT_10 = ist('2026-10-10T00:00:00');
@@ -30,7 +30,9 @@ describe('newCashTransaction', () => {
   });
 
   test('a blank note is stored as null', () => {
-    expect(newCashTransaction({ amount: '1', categoryId: 'food', note: '  ', day: OCT_10 }, () => 'c1')?.note).toBeNull();
+    expect(
+      newCashTransaction({ amount: '1', categoryId: 'food', note: '  ', day: OCT_10 }, () => 'c1')?.note,
+    ).toBeNull();
   });
 
   test('has its own source id so SMS dedup never touches it', () => {
@@ -50,7 +52,9 @@ test('an Excluded Transaction drops out of totals and returns when un-excluded',
   const txn = newCashTransaction({ amount: '250', categoryId: 'food', note: '', day: OCT_10 }, () => 'c1')!;
   const october = rangeFor('month', OCT_10);
   expect(spendByCategory([{ ...txn, isExcluded: true }], october)).toEqual([]);
-  expect(spendByCategory([{ ...txn, isExcluded: false }], october)).toEqual([{ categoryId: 'food', amountPaise: 25000 }]);
+  expect(spendByCategory([{ ...txn, isExcluded: false }], october)).toEqual([
+    { categoryId: 'food', amountPaise: 25000 },
+  ]);
 });
 
 test('labels a Transaction by Merchant, Cash, or Unknown', () => {
@@ -58,4 +62,12 @@ test('labels a Transaction by Merchant, Cash, or Unknown', () => {
   expect(merchantLabel(txn)).toBe('Cash');
   expect(merchantLabel({ ...txn, isCash: false })).toBe('Unknown');
   expect(merchantLabel({ ...txn, merchant: 'SWIGGY' })).toBe('SWIGGY');
+});
+
+test('the Save label shows the formatted amount once it is valid', () => {
+  expect(cashSaveLabel(rupeesToPaise('80'))).toBe('Save ₹80');
+  expect(cashSaveLabel(rupeesToPaise('1,23,456.5'))).toBe('Save ₹1,23,456.50');
+  expect(cashSaveLabel(rupeesToPaise(''))).toBe('Save');
+  expect(cashSaveLabel(rupeesToPaise('abc'))).toBe('Save');
+  expect(cashSaveLabel(rupeesToPaise('0.00'))).toBe('Save');
 });
