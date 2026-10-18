@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/Button';
 import { Text, TextInput } from '@/components/Text';
 import { repo } from '@/db/repo';
 import { sameAccount } from '@/domain/accounts';
 import { bankFromSender } from '@/domain/format';
 import type { Account, Transaction } from '@/domain/types';
+import { exportData } from '@/services/export';
 import { colors, radius } from '@/theme';
 
 interface AccountInfo {
@@ -73,7 +75,12 @@ export default function SettingsScreen() {
           </View>
         }
         ListEmptyComponent={<Text style={styles.hint}>Accounts appear here once SMS mention them.</Text>}
-        ListFooterComponent={accounts.length ? <Text style={styles.footer}>Tap a name to rename it.</Text> : undefined}
+        ListFooterComponent={
+          <View>
+            {accounts.length ? <Text style={styles.footer}>Tap a name to rename it.</Text> : undefined}
+            <ExportSection />
+          </View>
+        }
         renderItem={({ item, index }) => (
           <View style={[styles.card, index === 0 && styles.cardTop, index === sorted.length - 1 && styles.cardBottom]}>
             <AccountRow
@@ -86,6 +93,47 @@ export default function SettingsScreen() {
         )}
       />
     </SafeAreaView>
+  );
+}
+
+function ExportSection() {
+  const [busy, setBusy] = useState<'csv' | 'json' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (kind: 'csv' | 'json') => {
+    setBusy(kind);
+    setError(null);
+    try {
+      await exportData(kind);
+    } catch (e) {
+      console.error('Export failed', e);
+      setError('Export failed. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <View style={styles.export}>
+      <Text style={styles.sectionLabel}>Export</Text>
+      <Text style={styles.hint}>
+        Your data lives only on this phone. Export a backup or a spreadsheet and choose where to save or send it.
+      </Text>
+      <View style={styles.exportRow}>
+        <Button
+          label={busy === 'csv' ? 'Preparing…' : 'Transactions (CSV)'}
+          primary
+          disabled={busy !== null}
+          onPress={() => run('csv')}
+        />
+        <Button
+          label={busy === 'json' ? 'Preparing…' : 'All data (JSON)'}
+          disabled={busy !== null}
+          onPress={() => run('json')}
+        />
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : undefined}
+    </View>
   );
 }
 
@@ -173,6 +221,9 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 12, color: colors.muted },
   footer: { fontSize: 12, color: colors.muted, marginTop: 12 },
+  export: { gap: 8, marginTop: 28 },
+  exportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  error: { fontSize: 12, color: colors.danger },
   card: { backgroundColor: colors.surface, paddingHorizontal: 18 },
   cardTop: { borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card },
   cardBottom: { borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card },
