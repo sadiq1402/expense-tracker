@@ -1,8 +1,8 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, StyleSheet, Text, View } from 'react-native';
 
-import { requestPermission } from '../../modules/sms-reader';
+import { addInboxListener, requestPermission } from '../../modules/sms-reader';
 import { repo } from '@/db/repo';
 import { formatRupees } from '@/domain/format';
 import type { Transaction } from '@/domain/types';
@@ -16,11 +16,11 @@ export default function TransactionsScreen() {
 
   const [reviewCount, setReviewCount] = useState(0);
 
-  // Re-runs on return from Review so newly created Transactions show up
+  // Re-runs on return from Review, on return to the foreground and whenever a new SMS lands
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      (async () => {
+      const refresh = async () => {
         try {
           const granted = await requestPermission();
           if (granted) await runIngestion();
@@ -34,9 +34,14 @@ export default function TransactionsScreen() {
           console.error('Ingestion failed', e);
           if (!cancelled) setStatus('error');
         }
-      })();
+      };
+      refresh();
+      const inbox = addInboxListener(refresh);
+      const appState = AppState.addEventListener('change', (s) => s === 'active' && refresh());
       return () => {
         cancelled = true;
+        inbox.remove();
+        appState.remove();
       };
     }, []),
   );

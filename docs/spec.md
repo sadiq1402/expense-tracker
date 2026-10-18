@@ -5,9 +5,9 @@ Personal Android app, sideloaded as an APK. Terms are defined in `GLOSSARY.md`; 
 ## Ingestion
 - Source: bank / UPI SMS from any Indian bank. Covers UPI, card, ATM, NEFT/IMPS, auto-debit.
 - First launch: scan the last 6 months of inbox SMS.
-- New SMS are captured on arrival; on every app open, the inbox is re-scanned since the last processed SMS to catch misses.
+- New SMS are captured on arrival (the app watches the SMS store and re-scans when it changes); on every app open, the inbox is re-scanned since the last processed SMS, which also picks up SMS that arrived while the app was closed.
 - Parsing: generic patterns extract amount, direction (debit/credit), Account (masked number), UPI Reference, Merchant, timestamp. Non-transactional SMS (OTP, promos, balance alerts, "will be debited" reminders) are ignored. Transaction-looking SMS that cannot be confidently parsed go to Needs Review.
-- Dedup: messages with the same UPI Reference are one Transaction. Without a reference: same amount, same direction, within 5 minutes, from different senders → one Transaction.
+- Dedup: messages with the same UPI Reference are one Transaction; different UPI References are never merged. Otherwise (no reference on at least one side): same amount, same direction, within 5 minutes, from different senders → one Transaction.
 
 ## Accounts and Self-Transfers
 - Accounts are discovered from masked numbers in SMS; user can rename/confirm.

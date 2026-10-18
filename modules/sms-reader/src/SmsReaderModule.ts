@@ -2,7 +2,11 @@ import { NativeModule, requireNativeModule } from 'expo';
 
 import type { RawSms } from './SmsReader.types';
 
-declare class SmsReaderModule extends NativeModule<{}> {
+type SmsReaderEvents = {
+  onInboxChanged(): void;
+};
+
+declare class SmsReaderModule extends NativeModule<SmsReaderEvents> {
   readInbox(sinceMs: number): Promise<RawSms[]>;
 }
 

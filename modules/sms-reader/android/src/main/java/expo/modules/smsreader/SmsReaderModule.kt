@@ -1,13 +1,33 @@
 package expo.modules.smsreader
 
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Telephony
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class SmsReaderModule : Module() {
+  // Fires after the SMS app has written the message, so JS can re-scan the inbox and see it with its final id
+  private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+    override fun onChange(selfChange: Boolean) {
+      sendEvent("onInboxChanged")
+    }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("SmsReader")
+
+    Events("onInboxChanged")
+
+    OnStartObserving {
+      appContext.reactContext?.contentResolver?.registerContentObserver(Telephony.Sms.CONTENT_URI, true, observer)
+    }
+
+    OnStopObserving {
+      appContext.reactContext?.contentResolver?.unregisterContentObserver(observer)
+    }
 
     AsyncFunction("readInbox") { sinceMs: Double ->
       val resolver = appContext.reactContext?.contentResolver ?: throw Exceptions.ReactContextLost()
