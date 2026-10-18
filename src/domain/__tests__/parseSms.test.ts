@@ -1,6 +1,6 @@
 import { parseSms } from '@/domain/parseSms';
 
-import { sms, upiDebitFixtures } from './fixtures/sms';
+import { sms, transactionFixtures } from './fixtures/sms';
 
 const amountOf = (body: string) => {
   const r = parseSms(sms('x', 'VM-HDFCBK', body));
@@ -8,7 +8,7 @@ const amountOf = (body: string) => {
 };
 
 describe('parseSms', () => {
-  test.each(upiDebitFixtures)('parses $name', ({ sms: input, expected }) => {
+  test.each(transactionFixtures)('parses $name', ({ sms: input, expected }) => {
     expect(parseSms(input)).toEqual(expected);
   });
 
@@ -56,16 +56,43 @@ describe('parseSms', () => {
     ['reversal', 'Rs 500 debited from A/c XX1234 on 15-10-26 has been reversed. -HDFC'],
     ['bill reminder', 'Your HDFC Credit Card bill of Rs 12,000 is due on 20-10-26. Ignore if already paid.'],
     ['auto-debit mandate notice', 'Rs 499 will be auto-debited from A/c XX1234 on 20-10-26 for NETFLIX mandate.'],
-    ['credit with "sent" in footer', 'Rs.500 credited to A/c XX1234 by RAHUL. If not you, report via the link sent SMS.'],
+    ['promo', 'Get Rs 100 cashback on your first UPI payment of Rs 500! T&C apply. -HDFC Bank'],
+    ['offer credited', 'Congrats! Rs 50 cashback credited as reward points. Pay now to claim. -PhonePe'],
+    ['balance only', 'Avl Bal in A/c XX1234 is Rs 5,000.00 as on 15-10-26. -HDFC Bank'],
+    ['money request', 'RAHUL has requested Rs 500 from you on UPI. Pay via the app. -HDFC'],
+    ['discount promo', 'Get Rs 100 off! Use code SAVE on payments of Rs 500 debited via UPI. -Paytm'],
+    ['will be debited', 'Your A/c XX1234 will be debited with Rs 499 on 20-10-26 for NETFLIX. -ICICI'],
   ])('ignores %s', (_name, body) => {
     expect(parseSms(sms('n', 'VM-HDFCBK', body))).toEqual({ kind: 'ignored' });
   });
 
-  test.each([
-    ['card spend', 'Rs 1,200.00 spent on HDFC Bank Card XX1234 at AMAZON on 15-10-26.'],
-    ['ATM withdrawal', 'Rs 2,000 withdrawn from A/c XX1234 at ATM on 15-10-26.'],
-  ])('ignores non-UPI debit for now: %s', (_name, body) => {
-    expect(parseSms(sms('c', 'VM-HDFCBK', body))).toEqual({ kind: 'ignored' });
+  test('credit with "sent" in its footer is a credit', () => {
+    const r = parseSms(sms('c1', 'VM-HDFCBK', 'Rs.500 credited to A/c XX1234 by RAHUL. If not you, report via the link sent SMS.'));
+    expect(r.kind === 'transaction' && [r.txn.direction, r.txn.merchant]).toEqual(['credit', 'RAHUL']);
+  });
+
+  test('merchant refund credit is a transaction, not ignored', () => {
+    const r = parseSms(sms('rf', 'VM-HDFCBK', 'Rs 499.00 credited to your A/c XX1234 towards refund from AMAZON on 15-10-26.'));
+    expect(r.kind === 'transaction' && [r.txn.direction, r.txn.amountPaise]).toEqual(['credit', 49900]);
+  });
+
+  test('credit keyword without an amount goes to needs_review', () => {
+    const input = sms('r2', 'VM-KOTAKB', 'Your Kotak AC X7788 has been credited via IMPS. Check app for details.');
+    expect(parseSms(input)).toEqual({ kind: 'needs_review', sms: input, reason: 'amount not found' });
+  });
+
+  test('ACH debits are auto-debits', () => {
+    const r = parseSms(sms('ach', 'VM-HDFCBK', 'Rs.2000 debited from A/c XX1234 towards ACH D- BSE LTD on 15-10-26.'));
+    expect(r.kind === 'transaction' && r.txn.channel).toBe('autodebit');
+  });
+
+  test('merchant drops a VPA label and never captures an amount', () => {
+    const vpa = parseSms(sms('v', 'VM-HDFCBK', 'Rs 200 debited from A/c XX1234 to VPA shop@ybl on 15-10-26. UPI Ref 628812345678'));
+    expect(vpa.kind === 'transaction' && vpa.txn.merchant).toBe('SHOP@YBL');
+    const amt = parseSms(
+      sms('m', 'AD-SBIINB', 'Your A/c X5678 credited by Rs.5,000.00 on 15Oct26 by a/c linked to mobile 9XXXXXX123 (IMPS Ref no 628812345678)'),
+    );
+    expect(amt.kind === 'transaction' && amt.txn.merchant).toBeNull();
   });
 
   test('a word ending in "rs" is not an amount', () => {
