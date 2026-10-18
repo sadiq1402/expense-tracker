@@ -19,9 +19,9 @@ import {
   rangeFor,
   type RangePreset,
 } from '@/domain/dateRange';
-import { formatRupees, formatSignedRupees } from '@/domain/format';
+import { formatWholeRupees } from '@/domain/format';
 import { useLedger } from '@/hooks/useLedger';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
 
 const TOP_CATEGORIES = 4;
 const PRESETS: { value: RangePreset; label: string }[] = [
@@ -110,7 +110,7 @@ export default function DashboardScreen() {
           <Text style={styles.heroCaption}>
             Spent · {shortDate(range.start)} – {shortDate(range.end - 1)}
           </Text>
-          <Text style={styles.heroTotal}>{formatSignedRupees(total)}</Text>
+          <Text style={styles.heroTotal}>{formatWholeRupees(total)}</Text>
           <SplitBar slices={slices} />
         </View>
 
@@ -127,7 +127,7 @@ export default function DashboardScreen() {
           ) : undefined}
         </Card>
 
-        <Card title="Last 6 months" aside={<Text style={styles.aside}>avg {formatRupees(average)}</Text>}>
+        <Card title="Last 6 months" aside={<Text style={styles.aside}>avg {formatWholeRupees(average)}</Text>}>
           <TrendChart
             months={trend.map((m) => ({
               key: m.month,
@@ -153,13 +153,20 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.bg },
   message: { textAlign: 'center', color: colors.muted },
-  container: { padding: 20, paddingTop: 12, gap: 16 },
+  container: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 24, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
   headline: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
   row: { flexDirection: 'row', gap: 8 },
-  hero: { backgroundColor: colors.accent, borderRadius: radius.card + 4, padding: 22, gap: 4 },
-  heroCaption: { color: colors.onAccent, fontSize: 13, fontWeight: '600' },
-  heroTotal: { color: colors.onAccent, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  hero: {
+    backgroundColor: colors.accent,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 20,
+    gap: 6,
+  },
+  heroCaption: { color: colors.onAccent, fontSize: 13, fontWeight: '600', opacity: 0.9 },
+  heroTotal: { color: colors.onAccent, fontSize: 40, fontWeight: '800', letterSpacing: -1.2, lineHeight: 44 },
   empty: { color: colors.muted },
   aside: { fontSize: 12, color: colors.muted },
 });

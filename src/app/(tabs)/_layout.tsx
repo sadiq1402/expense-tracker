@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 
-import { Icon } from '@/components/Icon';
+import { TabIcon } from '@/components/TabIcon';
 import { colors, fontFamily } from '@/theme';
 
 export default function TabsLayout() {
@@ -9,8 +9,9 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.subtle,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line },
-        tabBarLabelStyle: { fontFamily, fontSize: 12, fontWeight: '600' },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, height: 80, paddingTop: 8 },
+        tabBarItemStyle: { gap: 4 },
+        tabBarLabelStyle: { fontFamily, fontSize: 12, fontWeight: '700' },
         headerStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         headerTitleStyle: { fontFamily, fontWeight: '700', color: colors.ink },
@@ -22,7 +23,7 @@ export default function TabsLayout() {
         options={{
           title: 'Dashboard',
           headerShown: false,
-          tabBarIcon: ({ color }) => <Icon name="bar_chart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="bar_chart" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -30,12 +31,16 @@ export default function TabsLayout() {
         options={{
           title: 'Transactions',
           headerShown: false,
-          tabBarIcon: ({ color }) => <Icon name="receipt_long" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="receipt_long" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: 'Settings', tabBarIcon: ({ color }) => <Icon name="settings" color={color} /> }}
+        options={{
+          title: 'Settings',
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="settings" color={color} focused={focused} />,
+        }}
       />
     </Tabs>
   );

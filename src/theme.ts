@@ -10,6 +10,9 @@ export const colors = {
   line: '#E3E7EB',
   track: '#EEF1F4',
   border: '#D5DBE1',
+  dashed: '#9AA5AF',
+  column: '#DCE3E9',
+  segment: '#E6EAEE',
   accent: '#0B6E5F',
   accentSoft: '#DDF0EC',
   onAccent: '#FFFFFF',
@@ -37,24 +40,33 @@ export const inputStyle = {
 export const fontFamily = 'Manrope';
 
 export interface CategoryVisual {
-  color: string;
-  tint: string;
+  color: string; // icon and initial
+  tint: string; // badge background
+  bar: string; // progress bar fill, brighter than the icon
   icon: AndroidSymbol;
 }
 
-export const NEUTRAL_VISUAL: CategoryVisual = { color: colors.subtle, tint: colors.track, icon: 'label' };
+// Split bar on the accent card, by rank: distinct hues that all read on teal
+export const SPLIT_COLORS = ['#FFB86B', '#FFFFFF', '#9AD8FF', '#C6B6FF', 'rgba(255,255,255,0.45)'];
+
+export const NEUTRAL_VISUAL: CategoryVisual = {
+  color: colors.subtle,
+  tint: colors.track,
+  bar: '#9AA5AF',
+  icon: 'label',
+};
 
 const VISUALS: Record<string, CategoryVisual> = {
-  food: { color: '#9A520B', tint: '#FFF1E2', icon: 'restaurant' },
-  groceries: { color: '#2E7D32', tint: '#E6F4E7', icon: 'local_grocery_store' },
-  shopping: { color: colors.accent, tint: '#E3F4F1', icon: 'shopping_bag' },
-  travel: { color: '#1F6FA8', tint: '#E4F3FD', icon: 'directions_car' },
-  bills: { color: '#5B44C2', tint: '#EFEAFF', icon: 'bolt' },
-  rent: { color: '#8A4B2A', tint: '#F6EBE4', icon: 'home' },
-  entertainment: { color: '#B0306A', tint: '#FBE7F0', icon: 'movie' },
-  health: { color: '#B3261E', tint: '#FDE8E8', icon: 'medical_services' },
-  people: { color: '#3E5A99', tint: '#E8EDF8', icon: 'group' },
-  other: { color: colors.muted, tint: colors.track, icon: 'more_horiz' },
+  food: { color: '#B4610E', tint: '#FFF1E2', bar: '#F08C2B', icon: 'restaurant' },
+  groceries: { color: '#2E7D32', tint: '#E6F4E7', bar: '#43A047', icon: 'local_grocery_store' },
+  shopping: { color: colors.accent, tint: '#E3F4F1', bar: '#0B6E5F', icon: 'shopping_bag' },
+  travel: { color: '#1F6FA8', tint: '#E4F3FD', bar: '#2F8FD6', icon: 'directions_car' },
+  bills: { color: '#5B44C2', tint: '#EFEAFF', bar: '#7B61E8', icon: 'bolt' },
+  rent: { color: '#8A4B2A', tint: '#F6EBE4', bar: '#B86B45', icon: 'home' },
+  entertainment: { color: '#B0306A', tint: '#FBE7F0', bar: '#D9488A', icon: 'movie' },
+  health: { color: '#B3261E', tint: '#FDE8E8', bar: '#E05252', icon: 'medical_services' },
+  people: { color: '#3E5A99', tint: '#E8EDF8', bar: '#5B7BC4', icon: 'group' },
+  other: { color: colors.muted, tint: colors.track, bar: '#9AA5AF', icon: 'more_horiz' },
 };
 
 export function categoryVisual(categoryId: string | null): CategoryVisual {

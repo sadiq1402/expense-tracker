@@ -15,6 +15,7 @@ import { OTHER_ID } from '@/domain/categorize';
 import { dayRange, istDayFromPicker, pickerDateFromIstDay } from '@/domain/dateRange';
 import { rupeesToPaise } from '@/domain/format';
 import type { Category } from '@/domain/types';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { colors, radius } from '@/theme';
 
 export default function AddCashScreen() {
@@ -26,6 +27,7 @@ export default function AddCashScreen() {
   const [day, setDay] = useState(today);
   const [picking, setPicking] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const keyboard = useKeyboardHeight();
 
   useEffect(() => {
     let cancelled = false;
@@ -55,8 +57,8 @@ export default function AddCashScreen() {
   })}`;
 
   return (
-    // adjustResize already lifts the content above the keyboard; the inset keeps Save off the gesture bar
-    <SafeAreaView edges={['bottom']} style={styles.screen}>
+    // The inset keeps Save off the gesture bar; while the keyboard is up, Save rides on top of it instead
+    <SafeAreaView edges={keyboard ? [] : ['bottom']} style={[styles.screen, { paddingBottom: keyboard }]}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.amountBlock}>
           <Text style={styles.amountLabel}>Amount</Text>
