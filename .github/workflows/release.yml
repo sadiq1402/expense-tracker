@@ -35,10 +35,8 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test -- --ci
 
-      # Generated, not committed (CNG); signed with the template's debug keystore, which is fine for sideloading
-      - run: npx expo prebuild -p android --no-install
-      - run: ./gradlew assembleRelease --no-daemon
-        working-directory: android
+      # Same command as local releases: prebuild (android/ is generated, not committed) then an arm64 release build
+      - run: npm run build:apk
 
       - run: cp android/app/build/outputs/apk/release/app-release.apk "expense-tracker-$TAG.apk"
 
