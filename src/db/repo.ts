@@ -94,10 +94,10 @@ export const repo = {
 
   async accounts(): Promise<Account[]> {
     const db = await getDb();
-    const rows = await db.getAllAsync<{ id: string; mask: string; name: string; confirmed: number }>(
-      'SELECT id, mask, name, confirmed FROM accounts ORDER BY name',
+    const rows = await db.getAllAsync<{ id: string; mask: string; name: string; confirmed: number; hidden: number }>(
+      'SELECT id, mask, name, confirmed, hidden FROM accounts ORDER BY name',
     );
-    return rows.map((r) => ({ ...r, confirmed: r.confirmed === 1 }));
+    return rows.map((r) => ({ ...r, confirmed: r.confirmed === 1, hidden: r.hidden === 1 }));
   },
 
   async upsertAccounts(accounts: Account[]) {
@@ -105,12 +105,10 @@ export const repo = {
     const db = await getDb();
     await db.withExclusiveTransactionAsync(async (txn) => {
       for (const a of accounts) {
-        await txn.runAsync('INSERT OR REPLACE INTO accounts (id, mask, name, confirmed) VALUES (?, ?, ?, ?)', [
-          a.id,
-          a.mask,
-          a.name,
-          a.confirmed ? 1 : 0,
-        ]);
+        await txn.runAsync(
+          'INSERT OR REPLACE INTO accounts (id, mask, name, confirmed, hidden) VALUES (?, ?, ?, ?, ?)',
+          [a.id, a.mask, a.name, a.confirmed ? 1 : 0, a.hidden ? 1 : 0],
+        );
       }
     });
   },

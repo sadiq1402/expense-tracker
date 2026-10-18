@@ -8,17 +8,18 @@ import { MerchantRow, TrendChart } from '@/components/DashboardWidgets';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
 import { monthlyTrend, spendOf, topMerchants, totalSpend, trendAverage } from '@/domain/aggregate';
+import { filterByAccount } from '@/domain/accounts';
 import {
   breakdownSummary,
   breakdownTxns,
   matchesFilter,
   merchantCategoryOf,
-  merchantPayments,
   type BreakdownFilter,
 } from '@/domain/breakdown';
 import { monthKey, monthLabel, monthName, monthRangeOf, type DateRange } from '@/domain/dateRange';
 import { accountLabel, formatRupees, formatWholeRupees, merchantLabel } from '@/domain/format';
 import { dayLabel, timeLabel } from '@/domain/listing';
+import { useAccountFilter } from '@/hooks/useAccountFilter';
 import { useLedger } from '@/hooks/useLedger';
 import { setMerchantCategory } from '@/services/categories';
 import { openBreakdown } from '@/services/navigation';
@@ -33,7 +34,9 @@ export default function BreakdownScreen() {
     label: string;
   }>();
   const navigation = useNavigation();
-  const { status, txns, categories, accounts, loadedAt: now, reload } = useLedger();
+  const { status, txns: allTxns, categories, accounts, loadedAt: now, reload } = useLedger();
+  const account = useAccountFilter();
+  const txns = useMemo(() => filterByAccount(allTxns, account), [allTxns, account]);
   // Tapping a mini-trend bar narrows this screen to that month
   const [range, setRange] = useState<DateRange>({ start: Number(params.start), end: Number(params.end) });
   const [label, setLabel] = useState(params.label);
@@ -55,8 +58,8 @@ export default function BreakdownScreen() {
   if (status === 'loading') return <ActivityIndicator style={styles.center} color={colors.accent} />;
 
   const isMerchant = kind === 'merchant';
-  const merchantCategory = isMerchant ? merchantCategoryOf(txns, key) : key;
-  const allPayments = isMerchant ? merchantPayments(txns, key).length : 0;
+  // Read past the Account chips: a Merchant's Category isn't per Account
+  const merchantCategory = isMerchant ? merchantCategoryOf(allTxns, key) : key;
   const title = isMerchant ? merchantLabel({ merchant: key, isCash: false }) : (names.get(key) ?? 'Other');
   const visual = categoryVisual(merchantCategory);
 
@@ -127,7 +130,7 @@ export default function BreakdownScreen() {
           </View>
           <Text style={styles.hint}>
             {moved === null
-              ? `Applies to all ${allPayments} payment${allPayments === 1 ? '' : 's'} to ${title}, past and future.`
+              ? `Applies to every payment to ${title}, past and future.`
               : moved === 0
                 ? `All payments are already in ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`
                 : `Moved ${moved} payment${moved === 1 ? '' : 's'} to ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`}

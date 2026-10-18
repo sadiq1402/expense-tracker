@@ -1,20 +1,21 @@
+import { accountLabel } from '@/domain/format';
 import type { Account, Transaction } from '@/domain/types';
 
 const SELF_TRANSFER_WINDOW_MS = 10 * 60_000;
 
 export function discoverAccounts(txns: Transaction[], known: Account[], newId: () => string): Account[] {
-  const seen = new Set(known.map((a) => a.mask));
+  const seen = known.map((a) => a.mask);
   const found: Account[] = [];
   for (const { accountMask: mask } of txns) {
-    if (!mask || seen.has(mask)) continue;
-    seen.add(mask);
-    found.push({ id: newId(), mask, name: `A/c XX${mask}`, confirmed: false });
+    if (!mask || seen.some((m) => sameAccount(m, mask))) continue;
+    seen.push(mask);
+    found.push({ id: newId(), mask, name: `A/c XX${mask}`, confirmed: false, hidden: false });
   }
   return found;
 }
 
 // Banks print 3 or 4 trailing digits for the same Account ("901" vs "1901")
-const sameAccount = (a: string, b: string) => a.endsWith(b) || b.endsWith(a);
+export const sameAccount = (a: string, b: string) => a.endsWith(b) || b.endsWith(a);
 
 const gap = (a: Transaction, b: Transaction) => Math.abs(a.occurredAt - b.occurredAt);
 
@@ -63,4 +64,38 @@ export function selfTransferPartner(txn: Transaction, txns: Transaction[]): Tran
       .filter((t) => (txn.direction === 'debit' ? canPair(txn, t) : canPair(t, txn)))
       .sort((a, b) => gap(a, txn) - gap(b, txn))[0] ?? null
   );
+}
+
+const onAccount = (t: Transaction, mask: string) => !!t.accountMask && sameAccount(t.accountMask, mask);
+
+// Hidden Accounts drop out of every total and list; Cash has no Account and always shows
+export function visibleTxns(txns: Transaction[], accounts: Account[]): Transaction[] {
+  const hidden = accounts.filter((a) => a.hidden).map((a) => a.mask);
+  if (hidden.length === 0) return txns;
+  return txns.filter((t) => !hidden.some((mask) => onAccount(t, mask)));
+}
+
+export function filterByAccount(txns: Transaction[], mask: string | null): Transaction[] {
+  return mask ? txns.filter((t) => onAccount(t, mask)) : txns;
+}
+
+export interface AccountChip {
+  mask: string;
+  label: string;
+  count: number;
+}
+
+export function accountChips(accounts: Account[], txns: Transaction[]): AccountChip[] {
+  const names = new Map(accounts.map((a) => [a.mask, a.name]));
+  return accounts
+    .filter((a) => !a.hidden)
+    .map((a) => {
+      const mine = txns.filter((t) => onAccount(t, a.mask));
+      return {
+        mask: a.mask,
+        label: accountLabel(a.mask, names, mine[0]?.sourceSender ?? '') ?? `··${a.mask}`,
+        count: mine.length,
+      };
+    })
+    .sort((x, y) => y.count - x.count);
 }

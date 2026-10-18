@@ -57,4 +57,5 @@ export interface Account {
   mask: string;
   name: string;
   confirmed: boolean;
+  hidden: boolean;
 }

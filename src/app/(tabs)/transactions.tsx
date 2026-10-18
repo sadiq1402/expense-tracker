@@ -3,16 +3,21 @@ import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountChips } from '@/components/AccountChips';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
 import { TransactionRow } from '@/components/TransactionRow';
+import { filterByAccount } from '@/domain/accounts';
 import { accountLabel, formatWholeRupees } from '@/domain/format';
 import { describeRow, groupByDay, reviewSummary } from '@/domain/listing';
+import { useAccountFilter } from '@/hooks/useAccountFilter';
 import { useLedger } from '@/hooks/useLedger';
 import { colors } from '@/theme';
 
 export default function TransactionsScreen() {
-  const { status, txns, categories, accounts, reviewCount, reviewReasons, loadedAt } = useLedger();
+  const { status, txns: allTxns, categories, accounts, reviewCount, reviewReasons, loadedAt } = useLedger();
+  const account = useAccountFilter();
+  const txns = useMemo(() => filterByAccount(allTxns, account), [allTxns, account]);
   const categoryNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
   const accountNames = useMemo(() => new Map(accounts.map((a) => [a.mask, a.name])), [accounts]);
   const sections = useMemo(() => groupByDay(txns, loadedAt).map((g) => ({ ...g, data: g.txns })), [txns, loadedAt]);
@@ -42,6 +47,7 @@ export default function TransactionsScreen() {
             <Text style={styles.headline} accessibilityRole="header">
               Transactions
             </Text>
+            <AccountChips accounts={accounts} txns={allTxns} />
             {reviewCount > 0 ? (
               <Link href="/review" asChild>
                 <Pressable style={styles.review} accessibilityRole="button">
@@ -72,7 +78,8 @@ export default function TransactionsScreen() {
         renderItem={({ item, index, section }) => {
           const { subtitle, tone } = describeRow(item, {
             category: item.categoryId ? (categoryNames.get(item.categoryId) ?? null) : null,
-            account: accountLabel(item.accountMask, accountNames, item.sourceSender),
+            // Every row shares the filtered Account, so it adds nothing
+            account: account ? null : accountLabel(item.accountMask, accountNames, item.sourceSender),
           });
           const first = index === 0;
           const last = index === section.data.length - 1;

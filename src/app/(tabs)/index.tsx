@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountChips } from '@/components/AccountChips';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { CategoryRow, MerchantRow, MoreButton, SplitBar, TrendChart } from '@/components/DashboardWidgets';
 import { Segmented } from '@/components/Segmented';
 import { Text } from '@/components/Text';
+import { filterByAccount } from '@/domain/accounts';
 import { monthlyTrend, spendByCategory, splitTop, topMerchants, totalSpend, trendAverage } from '@/domain/aggregate';
 import {
   DAY_MS,
@@ -22,6 +24,7 @@ import {
   type RangePreset,
 } from '@/domain/dateRange';
 import { formatWholeRupees } from '@/domain/format';
+import { useAccountFilter } from '@/hooks/useAccountFilter';
 import { useLedger } from '@/hooks/useLedger';
 import { openBreakdown } from '@/services/navigation';
 import { colors } from '@/theme';
@@ -37,7 +40,9 @@ const shortDate = (ms: number) =>
   new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 
 export default function DashboardScreen() {
-  const { status, txns, categories, loadedAt: now } = useLedger();
+  const { status, txns: allTxns, categories, accounts, loadedAt: now } = useLedger();
+  const account = useAccountFilter();
+  const txns = useMemo(() => filterByAccount(allTxns, account), [allTxns, account]);
   const [preset, setPreset] = useState<RangePreset>('month');
   // null until picked: defaults to the last 7 days ending today
   const [custom, setCustom] = useState<{ from: number; to: number } | null>(null);
@@ -106,6 +111,8 @@ export default function DashboardScreen() {
             }}
           />
         </View>
+
+        <AccountChips accounts={accounts} txns={allTxns} />
 
         {preset === 'custom' ? (
           <View style={styles.row}>
