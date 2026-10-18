@@ -1,9 +1,11 @@
 import { Link } from 'expo-router';
 import { useMemo } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { formatRupees, merchantLabel } from '@/domain/format';
 import { useLedger } from '@/hooks/useLedger';
+import { colors } from '@/theme';
 
 export default function TransactionsScreen() {
   const { status, txns, categories, reviewCount } = useLedger();
@@ -70,19 +72,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: colors.line,
   },
   flex: { flex: 1 },
   merchant: { fontSize: 16, fontWeight: '500' },
-  date: { color: '#666', marginTop: 2 },
+  date: { color: colors.muted, marginTop: 2 },
   amount: { fontSize: 16, fontVariant: ['tabular-nums'] },
-  credit: { color: '#188038' },
+  credit: { color: colors.credit },
   excluded: { opacity: 0.45 },
-  addCash: { padding: 16, color: '#1a73e8', fontWeight: '500' },
+  addCash: { padding: 16, color: colors.accent, fontWeight: '500' },
   banner: {
     padding: 16,
-    backgroundColor: '#fef7e0',
-    color: '#7a4f01',
+    backgroundColor: colors.warnBg,
+    color: colors.warnInk,
     fontWeight: '500',
   },
 });
