@@ -1,53 +1,13 @@
-import { Link, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { useMemo } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { addInboxListener, requestPermission } from '../../modules/sms-reader';
-import { repo } from '@/db/repo';
 import { formatRupees } from '@/domain/format';
-import type { Transaction } from '@/domain/types';
-import { runIngestion } from '@/services/ingestion';
-
-type Status = 'loading' | 'denied' | 'error' | 'ready';
+import { useLedger } from '@/hooks/useLedger';
 
 export default function TransactionsScreen() {
-  const [status, setStatus] = useState<Status>('loading');
-  const [txns, setTxns] = useState<Transaction[]>([]);
-
-  const [reviewCount, setReviewCount] = useState(0);
-  const [categoryNames, setCategoryNames] = useState<Map<string, string>>(new Map());
-
-  // Re-runs on return from Review, on return to the foreground and whenever a new SMS lands
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      const refresh = async () => {
-        try {
-          const granted = await requestPermission();
-          if (granted) await runIngestion();
-          const all = granted ? await repo.allTransactions() : [];
-          const review = granted ? await repo.listNeedsReview() : [];
-          const cats = await repo.categories();
-          if (cancelled) return;
-          setCategoryNames(new Map(cats.map((c) => [c.id, c.name])));
-          setTxns(all);
-          setReviewCount(review.length);
-          setStatus(granted ? 'ready' : 'denied');
-        } catch (e) {
-          console.error('Ingestion failed', e);
-          if (!cancelled) setStatus('error');
-        }
-      };
-      refresh();
-      const inbox = addInboxListener(refresh);
-      const appState = AppState.addEventListener('change', (s) => s === 'active' && refresh());
-      return () => {
-        cancelled = true;
-        inbox.remove();
-        appState.remove();
-      };
-    }, []),
-  );
+  const { status, txns, categories, reviewCount } = useLedger();
+  const categoryNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
 
   if (status === 'loading') return <ActivityIndicator style={styles.center} />;
   if (status === 'denied' || status === 'error') {
@@ -81,7 +41,9 @@ export default function TransactionsScreen() {
               <Text style={styles.merchant}>{item.merchant ?? 'Unknown'}</Text>
               <Text style={styles.date}>
                 {new Date(item.occurredAt).toLocaleDateString('en-IN')}
-                {item.categoryId && categoryNames.has(item.categoryId) ? ` · ${categoryNames.get(item.categoryId)}` : ''}
+                {item.categoryId && categoryNames.has(item.categoryId)
+                  ? ` · ${categoryNames.get(item.categoryId)}`
+                  : ''}
               </Text>
             </View>
             <Text style={[styles.amount, item.direction === 'credit' && styles.credit]}>
@@ -98,7 +60,13 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   empty: { textAlign: 'center', padding: 24 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ccc',
+  },
   flex: { flex: 1 },
   merchant: { fontSize: 16, fontWeight: '500' },
   date: { color: '#666', marginTop: 2 },
