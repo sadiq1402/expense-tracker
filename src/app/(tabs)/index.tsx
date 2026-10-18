@@ -1,7 +1,8 @@
 import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { BarList, ColumnChart } from '@/components/Bars';
 import { Button } from '@/components/Button';
 import { monthlyTrend, spendByCategory, topMerchants, totalSpend } from '@/domain/aggregate';
@@ -16,6 +17,7 @@ import {
 } from '@/domain/dateRange';
 import { formatRupees } from '@/domain/format';
 import { useLedger } from '@/hooks/useLedger';
+import { colors } from '@/theme';
 
 const shortDate = (ms: number) =>
   new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
@@ -117,6 +119,6 @@ const styles = StyleSheet.create({
   container: { padding: 16, gap: 8 },
   row: { flexDirection: 'row', gap: 8 },
   total: { fontSize: 32, fontWeight: '600', marginTop: 16, fontVariant: ['tabular-nums'] },
-  caption: { color: '#666' },
+  caption: { color: colors.muted },
   heading: { fontSize: 16, fontWeight: '600', marginTop: 24, marginBottom: 4 },
 });

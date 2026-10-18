@@ -1,6 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { formatRupees } from '@/domain/format';
+import { colors } from '@/theme';
 
 export interface Bar {
   key: string;
@@ -49,17 +51,17 @@ export function ColumnChart({ bars }: { bars: Bar[] }) {
 }
 
 const styles = StyleSheet.create({
-  empty: { color: '#666', paddingVertical: 8 },
+  empty: { color: colors.muted, paddingVertical: 8 },
   list: { gap: 12 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
   label: { flex: 1, fontSize: 14 },
-  detail: { color: '#666' },
+  detail: { color: colors.muted },
   amount: { fontSize: 14, fontVariant: ['tabular-nums'] },
-  track: { height: 8, borderRadius: 4, backgroundColor: '#e8eaed' },
-  fill: { height: 8, borderRadius: 4, backgroundColor: '#1a73e8' },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.track },
+  fill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
   columns: { flexDirection: 'row', gap: 8, height: 140 },
   column: { flex: 1, alignItems: 'center', gap: 4 },
   columnTrack: { flex: 1, width: '70%', justifyContent: 'flex-end' },
-  columnFill: { width: '100%', borderRadius: 4, backgroundColor: '#1a73e8' },
-  columnLabel: { fontSize: 12, color: '#666' },
+  columnFill: { width: '100%', borderRadius: 4, backgroundColor: colors.accent },
+  columnLabel: { fontSize: 12, color: colors.muted },
 });

@@ -1,10 +1,12 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
+import { Text, TextInput } from '@/components/Text';
 import { Button } from '@/components/Button';
 import { repo } from '@/db/repo';
 import type { Account } from '@/domain/types';
+import { colors, inputStyle } from '@/theme';
 
 export default function SettingsScreen() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -64,16 +66,16 @@ function AccountRow({ account, onSave }: { account: Account; onSave: (a: Account
 
 const styles = StyleSheet.create({
   heading: { fontSize: 16, fontWeight: '600', padding: 16, paddingBottom: 8 },
-  empty: { color: '#666', paddingHorizontal: 16 },
+  empty: { color: colors.muted, paddingHorizontal: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: colors.line,
   },
   flex: { flex: 1, gap: 4 },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderColor: '#999', borderRadius: 6, padding: 8, fontSize: 16 },
-  mask: { color: '#666', fontSize: 12 },
+  input: inputStyle,
+  mask: { color: colors.muted, fontSize: 12 },
 });

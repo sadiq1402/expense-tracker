@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { TextInput } from '@/components/Text';
 import { Button } from '@/components/Button';
 
 import type { NeedsReviewItem } from '@/db/repo';
@@ -8,6 +9,7 @@ import { rupeesToPaise } from '@/domain/format';
 import { findDirection } from '@/domain/parseSms';
 import type { Direction } from '@/domain/types';
 import { createFromReview } from '@/services/ingestion';
+import { inputStyle } from '@/theme';
 
 export function CreateTransactionForm({
   item,
@@ -58,10 +60,5 @@ export function CreateTransactionForm({
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 8 },
   form: { gap: 8 },
-  input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#999',
-    borderRadius: 6,
-    padding: 8,
-  },
+  input: inputStyle,
 });

@@ -2,14 +2,16 @@ import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Text, TextInput } from '@/components/Text';
 import { Button } from '@/components/Button';
 import { repo } from '@/db/repo';
 import { newCashTransaction } from '@/domain/cash';
 import { OTHER_ID } from '@/domain/categorize';
 import { dayRange, istDayFromPicker, pickerDateFromIstDay } from '@/domain/dateRange';
 import type { Category } from '@/domain/types';
+import { inputStyle } from '@/theme';
 
 export default function AddCashScreen() {
   const [amount, setAmount] = useState('');
@@ -95,5 +97,5 @@ const styles = StyleSheet.create({
   heading: { marginTop: 16, fontSize: 16, fontWeight: '600' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   row: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderColor: '#999', borderRadius: 6, padding: 8, fontSize: 16 },
+  input: inputStyle,
 });

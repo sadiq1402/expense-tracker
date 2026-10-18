@@ -1,4 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+
+import { Text } from '@/components/Text';
+import { colors } from '@/theme';
 
 export function Button({
   label,
@@ -24,13 +27,15 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#999',
+    borderColor: colors.border,
   },
-  primary: { backgroundColor: '#1a73e8', borderColor: '#1a73e8' },
-  primaryText: { color: '#fff' },
+  primary: { backgroundColor: colors.accent, borderColor: colors.accent },
+  primaryText: { color: colors.onAccent },
   disabled: { opacity: 0.4 },
 });

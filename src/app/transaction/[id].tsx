@@ -1,8 +1,9 @@
 import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Text, TextInput } from '@/components/Text';
 import { Button } from '@/components/Button';
 import { repo } from '@/db/repo';
 import { newCategory } from '@/domain/categorize';
@@ -10,6 +11,7 @@ import { formatRupees, merchantLabel } from '@/domain/format';
 import type { Account, Category, Transaction } from '@/domain/types';
 import { toggleSelfTransfer } from '@/services/accounts';
 import { setCategory } from '@/services/categories';
+import { colors, inputStyle } from '@/theme';
 
 const latestSave = async (latest: { current: Transaction | null }, changes: Partial<Transaction>) => {
   if (!latest.current) return;
@@ -160,12 +162,12 @@ const styles = StyleSheet.create({
   container: { padding: 16, gap: 8 },
   amount: { fontSize: 28, fontWeight: '600', fontVariant: ['tabular-nums'] },
   merchant: { fontSize: 18 },
-  date: { color: '#666' },
+  date: { color: colors.muted },
   heading: { marginTop: 16, fontSize: 16, fontWeight: '600' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  hint: { color: '#666', fontSize: 12 },
+  hint: { color: colors.muted, fontSize: 12 },
   addRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  input: { flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: '#999', borderRadius: 6, padding: 8 },
-  error: { color: '#c5221f' },
+  input: { ...inputStyle, flex: 1 },
+  error: { color: colors.danger },
   note: { minHeight: 64, textAlignVertical: 'top' },
 });

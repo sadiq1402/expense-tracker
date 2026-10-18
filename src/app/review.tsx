@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/Text';
 import { Button } from '@/components/Button';
 import { CreateTransactionForm } from '@/components/CreateTransactionForm';
 import { repo, type NeedsReviewItem } from '@/db/repo';
+import { colors } from '@/theme';
 
 export default function ReviewScreen() {
   const [items, setItems] = useState<NeedsReviewItem[] | null>(null);
@@ -78,10 +80,10 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: colors.line,
     gap: 8,
   },
-  meta: { color: '#666', fontSize: 12 },
+  meta: { color: colors.muted, fontSize: 12 },
   body: { fontSize: 14 },
   actions: { flexDirection: 'row', gap: 8 },
 });

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/ui": "~58.0.20",
     "expo": "~58.0.14",
     "expo-constants": "~58.0.12",
@@ -33,10 +34,10 @@
     "@types/jest": "30.0.0",
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
+    "eslint-config-expo": "~58.0.4",
     "jest": "~30.5.2",
     "jest-expo": "~58.0.11",
-    "typescript": "~6.0.3",
-    "eslint-config-expo": "~58.0.4"
+    "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
