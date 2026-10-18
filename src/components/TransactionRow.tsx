@@ -43,7 +43,8 @@ export function TransactionRow({
   return (
     <Link href={{ pathname: '/transaction/[id]', params: { id: txn.id } }} asChild>
       <Pressable
-        style={[styles.row, !last && styles.divider]}
+        // Link's Slot drops style arrays in release builds, so the row layout must arrive flattened
+        style={StyleSheet.flatten([styles.row, !last && styles.divider])}
         accessibilityRole="button"
         accessibilityLabel={`${merchantLabel(txn)}, ${amount}, ${subtitle}`}
       >
