@@ -62,7 +62,8 @@
           }
         }
       ],
-      "./plugins/withReleasePermissions"
+      "./plugins/withReleasePermissions",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
