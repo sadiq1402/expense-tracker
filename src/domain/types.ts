@@ -51,3 +51,10 @@ export interface MerchantRule {
   categoryId: string;
   source: 'seed' | 'user';
 }
+
+export interface Account {
+  id: string;
+  mask: string;
+  name: string;
+  confirmed: boolean;
+}
