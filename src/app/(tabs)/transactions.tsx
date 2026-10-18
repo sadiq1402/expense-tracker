@@ -2,7 +2,7 @@ import { Link } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatRupees } from '@/domain/format';
+import { formatRupees, merchantLabel } from '@/domain/format';
 import { useLedger } from '@/hooks/useLedger';
 
 export default function TransactionsScreen() {
@@ -26,19 +26,24 @@ export default function TransactionsScreen() {
     <FlatList
       data={txns}
       ListHeaderComponent={
-        reviewCount > 0 ? (
-          <Link href="/review" style={styles.banner}>
-            {reviewCount} message{reviewCount === 1 ? '' : 's'} need review ›
+        <>
+          {reviewCount > 0 ? (
+            <Link href="/review" style={styles.banner}>
+              {reviewCount} message{reviewCount === 1 ? '' : 's'} need review ›
+            </Link>
+          ) : undefined}
+          <Link href="/add-cash" style={styles.addCash}>
+            + Add cash
           </Link>
-        ) : undefined
+        </>
       }
       keyExtractor={(t) => t.id}
       ListEmptyComponent={<Text style={styles.empty}>No transactions found in the last 6 months.</Text>}
       renderItem={({ item }) => (
         <Link href={{ pathname: '/transaction/[id]', params: { id: item.id } }} asChild>
-          <Pressable style={styles.row}>
+          <Pressable style={[styles.row, item.isExcluded && styles.excluded]}>
             <View style={styles.flex}>
-              <Text style={styles.merchant}>{item.merchant ?? 'Unknown'}</Text>
+              <Text style={styles.merchant}>{merchantLabel(item)}</Text>
               <Text style={styles.date}>
                 {new Date(item.occurredAt).toLocaleDateString('en-IN')}
                 {item.categoryId && categoryNames.has(item.categoryId)
@@ -72,6 +77,8 @@ const styles = StyleSheet.create({
   date: { color: '#666', marginTop: 2 },
   amount: { fontSize: 16, fontVariant: ['tabular-nums'] },
   credit: { color: '#188038' },
+  excluded: { opacity: 0.45 },
+  addCash: { padding: 16, color: '#1a73e8', fontWeight: '500' },
   banner: {
     padding: 16,
     backgroundColor: '#fef7e0',
