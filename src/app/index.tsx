@@ -1,6 +1,6 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { addInboxListener, requestPermission } from '../../modules/sms-reader';
 import { repo } from '@/db/repo';
@@ -15,6 +15,7 @@ export default function TransactionsScreen() {
   const [txns, setTxns] = useState<Transaction[]>([]);
 
   const [reviewCount, setReviewCount] = useState(0);
+  const [categoryNames, setCategoryNames] = useState<Map<string, string>>(new Map());
 
   // Re-runs on return from Review, on return to the foreground and whenever a new SMS lands
   useFocusEffect(
@@ -26,7 +27,9 @@ export default function TransactionsScreen() {
           if (granted) await runIngestion();
           const all = granted ? await repo.allTransactions() : [];
           const review = granted ? await repo.listNeedsReview() : [];
+          const cats = await repo.categories();
           if (cancelled) return;
+          setCategoryNames(new Map(cats.map((c) => [c.id, c.name])));
           setTxns(all);
           setReviewCount(review.length);
           setStatus(granted ? 'ready' : 'denied');
@@ -72,16 +75,21 @@ export default function TransactionsScreen() {
       keyExtractor={(t) => t.id}
       ListEmptyComponent={<Text style={styles.empty}>No transactions found in the last 6 months.</Text>}
       renderItem={({ item }) => (
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <Text style={styles.merchant}>{item.merchant ?? 'Unknown'}</Text>
-            <Text style={styles.date}>{new Date(item.occurredAt).toLocaleDateString('en-IN')}</Text>
-          </View>
-          <Text style={[styles.amount, item.direction === 'credit' && styles.credit]}>
-            {item.direction === 'credit' ? '+' : ''}
-            {formatRupees(item.amountPaise)}
-          </Text>
-        </View>
+        <Link href={{ pathname: '/transaction/[id]', params: { id: item.id } }} asChild>
+          <Pressable style={styles.row}>
+            <View style={styles.flex}>
+              <Text style={styles.merchant}>{item.merchant ?? 'Unknown'}</Text>
+              <Text style={styles.date}>
+                {new Date(item.occurredAt).toLocaleDateString('en-IN')}
+                {item.categoryId && categoryNames.has(item.categoryId) ? ` · ${categoryNames.get(item.categoryId)}` : ''}
+              </Text>
+            </View>
+            <Text style={[styles.amount, item.direction === 'credit' && styles.credit]}>
+              {item.direction === 'credit' ? '+' : ''}
+              {formatRupees(item.amountPaise)}
+            </Text>
+          </Pressable>
+        </Link>
       )}
     />
   );

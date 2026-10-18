@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
-import { Button, CreateTransactionForm } from '@/components/CreateTransactionForm';
+import { Button } from '@/components/Button';
+import { CreateTransactionForm } from '@/components/CreateTransactionForm';
 import { repo, type NeedsReviewItem } from '@/db/repo';
 
 export default function ReviewScreen() {

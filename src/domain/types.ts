@@ -39,3 +39,15 @@ export interface Transaction extends ParsedTxn {
   isCash: boolean;
   accountId: string | null;
 }
+
+export interface Category {
+  id: string;
+  name: string;
+  builtIn: boolean;
+}
+
+export interface MerchantRule {
+  merchant: string;
+  categoryId: string;
+  source: 'seed' | 'user';
+}
