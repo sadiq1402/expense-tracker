@@ -15,6 +15,7 @@ export const colors = {
   segment: '#E6EAEE',
   accent: '#0B6E5F',
   accentSoft: '#DDF0EC',
+  accentInk: '#08564A',
   onAccent: '#FFFFFF',
   credit: '#0B6E5F', // same as accent today; kept separate so money-in can change colour on its own
   warnBg: '#FFF4DE',

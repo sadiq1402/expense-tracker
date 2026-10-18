@@ -1,4 +1,11 @@
-import { discoverAccounts, markSelfTransfers, selfTransferPartner } from '@/domain/accounts';
+import {
+  accountChips,
+  discoverAccounts,
+  filterByAccount,
+  markSelfTransfers,
+  selfTransferPartner,
+  visibleTxns,
+} from '@/domain/accounts';
 
 import { txn } from './fixtures/txn';
 
@@ -13,12 +20,12 @@ beforeEach(() => {
 describe('discoverAccounts', () => {
   test('a new mask becomes an unconfirmed Account named A/c XX<mask>', () => {
     expect(discoverAccounts([txn({ accountMask: '1234' })], [], newId)).toEqual([
-      { id: 'a1', mask: '1234', name: 'A/c XX1234', confirmed: false },
+      { id: 'a1', mask: '1234', name: 'A/c XX1234', confirmed: false, hidden: false },
     ]);
   });
 
   test('known masks and missing masks create nothing; repeats create one', () => {
-    const known = [{ id: 'k', mask: '1234', name: 'Salary', confirmed: true }];
+    const known = [{ id: 'k', mask: '1234', name: 'Salary', confirmed: true, hidden: false }];
     const txns = [
       txn({ accountMask: '1234' }),
       txn({ accountMask: null }),
@@ -27,6 +34,12 @@ describe('discoverAccounts', () => {
     ];
     expect(discoverAccounts(txns, known, () => 'n').map((a) => a.mask)).toEqual(['5678']);
   });
+});
+
+test('a 3-digit mask of a known 4-digit Account is the same Account, not a new one', () => {
+  const known = [{ id: 'k', mask: '1901', name: 'A/c XX1901', confirmed: false, hidden: false }];
+  expect(discoverAccounts([txn({ accountMask: '901' })], known, () => 'n')).toEqual([]);
+  expect(discoverAccounts([txn({ accountMask: '1901' }), txn({ accountMask: '901' })], [], () => 'n')).toHaveLength(1);
 });
 
 describe('markSelfTransfers', () => {
@@ -117,5 +130,62 @@ describe('selfTransferPartner', () => {
       selfTransferPartner(d, [d, txn({ direction: 'credit', accountMask: '5678', occurredAt: 11 * MIN })]),
     ).toBeNull();
     expect(selfTransferPartner(d, [d, txn({ direction: 'credit', accountMask: '1234', occurredAt: MIN })])).toBeNull();
+  });
+});
+
+const account = (mask: string, over = {}) => ({
+  id: `a${mask}`,
+  mask,
+  name: `A/c XX${mask}`,
+  confirmed: false,
+  hidden: false,
+  ...over,
+});
+
+describe('visibleTxns', () => {
+  test('drops Transactions on hidden Accounts, keeps the rest and all Cash', () => {
+    const txns = [
+      txn({ id: 'h', accountMask: '1421' }),
+      txn({ id: 'y', accountMask: '9762' }),
+      txn({ id: 'c', accountMask: null, isCash: true }),
+    ];
+    const accounts = [account('1421', { hidden: true }), account('9762')];
+    expect(visibleTxns(txns, accounts).map((t) => t.id)).toEqual(['y', 'c']);
+  });
+
+  test('a hidden 4-digit Account also hides SMS that print only 3 digits of it', () => {
+    expect(visibleTxns([txn({ accountMask: '901' })], [account('1901', { hidden: true })])).toEqual([]);
+  });
+
+  test('with nothing hidden every Transaction shows', () => {
+    const txns = [txn({ accountMask: '1421' })];
+    expect(visibleTxns(txns, [account('1421')])).toBe(txns);
+  });
+});
+
+describe('filterByAccount', () => {
+  test('narrows to one Account, or returns everything for All accounts', () => {
+    const txns = [
+      txn({ id: 'a', accountMask: '1421' }),
+      txn({ id: 'b', accountMask: '9762' }),
+      txn({ id: 'c', accountMask: '421' }),
+    ];
+    expect(filterByAccount(txns, '1421').map((t) => t.id)).toEqual(['a', 'c']);
+    expect(filterByAccount(txns, null)).toBe(txns);
+  });
+});
+
+describe('accountChips', () => {
+  test('one chip per shown Account, named by the user or by bank and mask, busiest first', () => {
+    const txns = [
+      txn({ accountMask: '1421', sourceSender: 'VM-HDFCBK' }),
+      txn({ accountMask: '1421', sourceSender: 'VM-HDFCBK' }),
+      txn({ accountMask: '9762', sourceSender: 'AD-YESBNK' }),
+    ];
+    const accounts = [account('9762'), account('1421', { name: 'Salary' }), account('7357', { hidden: true })];
+    expect(accountChips(accounts, txns)).toEqual([
+      { mask: '1421', label: 'Salary', count: 2 },
+      { mask: '9762', label: 'Yes Bank ··9762', count: 1 },
+    ]);
   });
 });

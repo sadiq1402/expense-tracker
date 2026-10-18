@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 
 import { addInboxListener, requestPermission } from '../../modules/sms-reader';
 import { repo } from '@/db/repo';
+import { visibleTxns } from '@/domain/accounts';
 import type { Account, Category, Transaction } from '@/domain/types';
 import { runIngestion } from '@/services/ingestion';
 
@@ -56,7 +57,8 @@ export function useLedger(): Ledger & { reload: () => void } {
           if (!cancelled)
             setLedger({
               status: 'ready',
-              txns,
+              // Hidden Accounts leave every screen at once, so no screen can forget to filter them
+              txns: visibleTxns(txns, accounts),
               categories,
               accounts,
               reviewCount: needsReview.length,
