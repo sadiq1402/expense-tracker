@@ -4,7 +4,7 @@
 
 **Expense**: A debit Transaction that is not a Self-Transfer.
 
-**Refund**: A credit Transaction from a Merchant the user has previously paid; it reduces that Category's spending instead of counting as income.
+**Refund**: A credit from a Merchant the user has previously paid for a purchase (a payment in any Category other than Other or Transfers to People); it takes that payment's Category and reduces that Category's spending instead of counting as income.
 
 **Self-Transfer**: A Transaction that moves money between two of the user's own accounts. It is never counted as an Expense.
 

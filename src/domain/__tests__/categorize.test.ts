@@ -1,4 +1,4 @@
-import { categorize, DEFAULT_CATEGORIES, newCategory, ruleFromCorrection } from '@/domain/categorize';
+import { categorize, classifyCredit, DEFAULT_CATEGORIES, newCategory, ruleFromCorrection } from '@/domain/categorize';
 import type { Transaction } from '@/domain/types';
 
 const txn = (merchant: string | null, over: Partial<Transaction> = {}): Transaction => ({
@@ -105,5 +105,71 @@ describe('newCategory', () => {
       'Transfers to People',
       'Other',
     ]);
+  });
+});
+
+describe('classifyCredit', () => {
+  const debit = (merchant: string, categoryId: string, occurredAt: number, id = `d${occurredAt}`) =>
+    txn(merchant, { id, occurredAt, categoryId });
+  const credit = (merchant: string | null, occurredAt = 10_000) =>
+    txn(merchant, { id: 'c1', direction: 'credit', occurredAt });
+
+  test('a credit from a Merchant previously paid is a Refund in that Category', () => {
+    const history = [debit('AMAZON', 'shopping', 1_000)];
+    expect(classifyCredit(credit('AMAZON'), history)).toEqual({ isRefund: true, categoryId: 'shopping' });
+  });
+
+  test('matches SMS variants of the same Merchant', () => {
+    const history = [debit('AMAZON PAY', 'shopping', 1_000)];
+    expect(classifyCredit(credit('AMAZON'), history)).toEqual({ isRefund: true, categoryId: 'shopping' });
+    expect(classifyCredit(credit('SWIGGY*MUMBAI'), [debit('SWIGGY*BANGALORE', 'food', 1_000)])).toEqual({
+      isRefund: true,
+      categoryId: 'food',
+    });
+  });
+
+  test('takes the Category of the most recent earlier payment', () => {
+    const history = [
+      debit('AMAZON', 'shopping', 1_000),
+      debit('AMAZON', 'entertainment', 5_000),
+      debit('AMAZON', 'bills', 20_000),
+    ];
+    expect(classifyCredit(credit('AMAZON'), history).categoryId).toBe('entertainment');
+  });
+
+  test('a credit from someone never paid is not a Refund and has no Category', () => {
+    const history = [debit('AMAZON', 'shopping', 1_000)];
+    expect(classifyCredit(credit('RAHUL'), history)).toEqual({ isRefund: false, categoryId: null });
+    expect(classifyCredit(credit(null), history)).toEqual({ isRefund: false, categoryId: null });
+  });
+
+  test('payments made only after the credit do not make it a Refund', () => {
+    expect(classifyCredit(credit('AMAZON', 1_000), [debit('AMAZON', 'shopping', 5_000)]).isRefund).toBe(false);
+  });
+
+  test('a friend paid under Transfers to People who pays back is not a Refund', () => {
+    const history = [debit('RAHUL', 'people', 1_000)];
+    expect(classifyCredit(credit('RAHUL'), history)).toEqual({ isRefund: false, categoryId: null });
+  });
+
+  test('a friend paid under the default Other who pays back is not a Refund', () => {
+    expect(classifyCredit(credit('RAHUL'), [debit('RAHUL SHARMA', 'other', 1_000)])).toEqual({
+      isRefund: false,
+      categoryId: null,
+    });
+  });
+
+  test('payment gateways and generic words are not evidence of a purchase', () => {
+    const history = [debit('AMAZON PAY', 'shopping', 1_000), debit('RAZORPAY', 'shopping', 2_000)];
+    expect(classifyCredit(credit('PAY'), history).isRefund).toBe(false);
+    expect(classifyCredit(credit('RAZORPAY'), history).isRefund).toBe(false);
+  });
+
+  test('excluded payments and other credits are not evidence of a purchase', () => {
+    const history = [
+      txn('AMAZON', { id: 'x', occurredAt: 1_000, categoryId: 'shopping', isExcluded: true }),
+      txn('AMAZON', { id: 'y', occurredAt: 2_000, categoryId: null, direction: 'credit' }),
+    ];
+    expect(classifyCredit(credit('AMAZON'), history).isRefund).toBe(false);
   });
 });
