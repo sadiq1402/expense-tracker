@@ -1,56 +1,58 @@
-# Welcome to your Expo app 👋
+# Expense Tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A personal Android app that turns bank and UPI SMS into Transactions and shows where your money goes. Everything
+stays on the phone: no server, no account and no network access in release builds (see
+[`docs/adr/0001-on-device-sms-ingestion.md`](docs/adr/0001-on-device-sms-ingestion.md)).
 
-## Get started
+## Install
 
-1. Install dependencies
+Download `expense-tracker-<version>.apk` from the
+[latest release](https://github.com/sadiq1402/expense-tracker/releases/latest). The app reads SMS, so it can't be on
+the Play Store and Android guards it twice. Pick one of these paths.
+
+### Option A: over USB with adb (fewest prompts)
+
+1. On the phone: **Settings → About phone →** tap **Build number** 7 times, then **Settings → System → Developer
+   options → USB debugging**.
+2. Plug the phone in, accept the debugging prompt, and run:
 
    ```bash
-   npm install
+   adb install -r expense-tracker-<version>.apk
    ```
 
-2. Start the app
+3. Open the app and allow SMS access.
 
-   ```bash
-   npx expo start
-   ```
+### Option B: from the phone's browser
 
-In the output, you'll find options to open the app in a
+1. **Play Protect** may block the install ("App blocked to protect your device"). If the dialog offers **More details →
+   Install anyway**, use it. If it only offers **OK**, open **Play Store → profile → Play Protect → ⚙ → Scan apps with
+   Play Protect**, turn it off, install the APK, then turn it back on.
+2. Android then denies SMS access as a **restricted setting**. Open **Settings → Apps → expense-tracker**, try
+   **Permissions → SMS → Allow** once (it's greyed out), then use **⋮ → Allow restricted settings** and confirm.
+   **Allow** now works.
+3. Return to the app; it scans the last 6 months of SMS.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Installing a newer release over an existing one keeps your data and permissions.
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Develop
 
 ```bash
-npm run reset-project
+npm install
+npx expo run:android   # development build on a connected phone or emulator
+npm test               # Jest
+npx tsc --noEmit       # typecheck
+npx expo lint
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Domain logic is pure TypeScript in `src/domain/`, persistence in `src/db/`, screens in `src/app/` (Expo Router), and
+the native SMS reader is a local Expo module in `modules/sms-reader/`. Domain terms follow
+[`GLOSSARY.md`](GLOSSARY.md).
 
-### Other setup steps
+## Release
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Push a `v*` tag (or run the **Release APK** workflow with a tag) and GitHub Actions builds an `arm64-v8a` APK and
+attaches it to a GitHub Release. Locally: `npm run build:apk`.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Release builds strip every permission except `READ_SMS` (`plugins/withReleasePermissions.js`), including network
+access. Only `arm64-v8a` is built, which nearly every phone in use runs. They're signed with Expo's template debug
+keystore, which is fine for sideloading onto your own phone.

@@ -27,7 +27,8 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "./plugins/withReleasePermissions"
     ],
     "experiments": {
       "typedRoutes": true,
