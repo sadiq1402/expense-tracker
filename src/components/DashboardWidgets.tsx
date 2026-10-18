@@ -29,10 +29,16 @@ export function SplitBar({ slices }: { slices: CategorySlice[] }) {
   );
 }
 
-export function CategoryRow({ slice, max }: { slice: CategorySlice; max: number }) {
+export function CategoryRow({ slice, max, onPress }: { slice: CategorySlice; max: number; onPress?: () => void }) {
   const v = categoryVisual(slice.categoryId);
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${slice.name}, ${formatWholeRupees(slice.amountPaise)}`}>
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${slice.name}, ${formatWholeRupees(slice.amountPaise)}`}
+    >
       <View style={[styles.badge, { backgroundColor: v.tint }]}>
         <Icon name={v.icon} size={18} color={v.color} />
       </View>
@@ -47,13 +53,19 @@ export function CategoryRow({ slice, max }: { slice: CategorySlice; max: number 
           <View style={[styles.fill, { width: `${(slice.amountPaise / max) * 100}%`, backgroundColor: v.bar }]} />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
-export function MerchantRow({ merchant, amountPaise, count }: MerchantSpend) {
+export function MerchantRow({ merchant, amountPaise, count, onPress }: MerchantSpend & { onPress?: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${merchantLabel({ merchant, isCash: false })}, ${formatWholeRupees(amountPaise)}`}
+    >
       <View style={[styles.badge, { backgroundColor: colors.track }]}>
         <Text style={styles.initial}>{merchantLabel({ merchant, isCash: false }).charAt(0)}</Text>
       </View>
@@ -66,20 +78,22 @@ export function MerchantRow({ merchant, amountPaise, count }: MerchantSpend) {
         </Text>
       </View>
       <Text style={styles.value}>{formatWholeRupees(amountPaise)}</Text>
-    </View>
+    </Pressable>
   );
 }
 
 export function TrendChart({
   months,
   onSelect,
+  height = 96,
 }: {
   months: { key: string; label: string; amountPaise: number; current: boolean }[];
   onSelect: (key: string) => void;
+  height?: number;
 }) {
   const max = Math.max(1, ...months.map((m) => m.amountPaise));
   return (
-    <View style={styles.columns}>
+    <View style={[styles.columns, { height }]}>
       {months.map((m) => (
         <Pressable
           key={m.key}

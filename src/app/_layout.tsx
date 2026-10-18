@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="review" options={{ title: 'Needs Review' }} />
         <Stack.Screen name="transaction/[id]" options={{ title: '' }} />
+        <Stack.Screen name="breakdown" options={{ title: '' }} />
         <Stack.Screen
           name="add-cash"
           options={{
