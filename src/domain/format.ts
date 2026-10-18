@@ -1,3 +1,5 @@
+import type { Transaction } from '@/domain/types';
+
 // Hand-rolled lakh/crore grouping so output doesn't depend on the device's Intl data
 export function formatRupees(paise: number): string {
   const rupees = Math.floor(paise / 100).toString();
@@ -14,4 +16,8 @@ export function rupeesToPaise(amount: string): number | null {
   if (!m) return null;
   const paise = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
   return paise > 0 ? paise : null;
+}
+
+export function merchantLabel(t: Pick<Transaction, 'merchant' | 'isCash'>): string {
+  return t.merchant ?? (t.isCash ? 'Cash' : 'Unknown');
 }
