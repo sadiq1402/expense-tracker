@@ -98,7 +98,7 @@ export default function TransactionScreen() {
     await choose(c.id);
   };
 
-  const account = accountLabel(txn.accountMask, new Map(accounts.map((a) => [a.mask, a.name])));
+  const account = accountLabel(txn.accountMask, new Map(accounts.map((a) => [a.mask, a.name])), txn.sourceSender);
   const missingSms = txn.sourceSmsIds.length - smsMessages.length;
 
   return (
@@ -118,7 +118,7 @@ export default function TransactionScreen() {
           {categories.map((c) => (
             <Button key={c.id} label={c.name} primary={c.id === txn.categoryId} onPress={() => choose(c.id)} />
           ))}
-          {adding ? undefined : <Button label="+ New" onPress={() => setAdding(true)} />}
+          {adding ? undefined : <Button label="+ New" dashed onPress={() => setAdding(true)} />}
         </View>
         {adding ? (
           <View style={styles.addRow}>
@@ -218,7 +218,7 @@ export default function TransactionScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  container: { padding: 20, gap: 16 },
+  container: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 16 },
   header: { alignItems: 'center', gap: 6, paddingBottom: 4 },
   merchant: { fontSize: 17, fontWeight: '700', marginTop: 4 },
   amount: { fontSize: 38, fontWeight: '800', letterSpacing: -1 },

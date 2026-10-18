@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 64,
   },
-  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
+  divider: { borderBottomWidth: 1, borderColor: colors.track },
   avatar: { alignItems: 'center', justifyContent: 'center' },
   initial: { fontWeight: '800' },
   flex: { flex: 1, gap: 2 },

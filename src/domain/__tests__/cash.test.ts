@@ -61,7 +61,7 @@ test('labels a Transaction by Merchant, Cash, or Unknown', () => {
   const txn = newCashTransaction({ amount: '1', categoryId: 'food', note: '', day: OCT_10 }, () => 'c1')!;
   expect(merchantLabel(txn)).toBe('Cash');
   expect(merchantLabel({ ...txn, isCash: false })).toBe('Unknown');
-  expect(merchantLabel({ ...txn, merchant: 'SWIGGY' })).toBe('SWIGGY');
+  expect(merchantLabel({ ...txn, merchant: 'SWIGGY' })).toBe('Swiggy');
 });
 
 test('the Save label shows the formatted amount once it is valid', () => {
