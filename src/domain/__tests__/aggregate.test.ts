@@ -1,5 +1,12 @@
 import { monthlyTrend, spendByCategory, splitTop, topMerchants, totalSpend, trendAverage } from '@/domain/aggregate';
-import { dayRange, istDayFromPicker, monthLabel, pickerDateFromIstDay, rangeFor } from '@/domain/dateRange';
+import {
+  dayRange,
+  istDayFromPicker,
+  monthLabel,
+  monthRangeOf,
+  pickerDateFromIstDay,
+  rangeFor,
+} from '@/domain/dateRange';
 import { classifyCredit } from '@/domain/categorize';
 import type { Transaction } from '@/domain/types';
 
@@ -47,6 +54,20 @@ describe('rangeFor', () => {
     // 2026-10-18 is a Sunday
     expect(rangeFor('week', NOW)).toEqual({ start: ist('2026-10-12T00:00:00'), end: ist('2026-10-19T00:00:00') });
     expect(rangeFor('week', ist('2026-10-19T00:30:00')).start).toBe(ist('2026-10-19T00:00:00'));
+  });
+});
+
+describe('monthRangeOf', () => {
+  test('a trend month key maps to that whole IST month', () => {
+    expect(monthRangeOf('2026-08')).toEqual({ start: ist('2026-08-01T00:00:00'), end: ist('2026-09-01T00:00:00') });
+  });
+
+  test('December rolls into the next year', () => {
+    expect(monthRangeOf('2025-12').end).toBe(ist('2026-01-01T00:00:00'));
+  });
+
+  test('matches the current-month range for the current month', () => {
+    expect(monthRangeOf('2026-10')).toEqual(OCTOBER);
   });
 });
 
@@ -135,7 +156,9 @@ describe('spendByCategory', () => {
   });
 
   test('uncategorized debits are grouped under Other', () => {
-    expect(spendByCategory([txn({ categoryId: null })], OCTOBER)).toEqual([{ categoryId: 'other', amountPaise: 10000 }]);
+    expect(spendByCategory([txn({ categoryId: null })], OCTOBER)).toEqual([
+      { categoryId: 'other', amountPaise: 10000 },
+    ]);
   });
 });
 

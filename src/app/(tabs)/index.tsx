@@ -15,6 +15,7 @@ import {
   istDayFromPicker,
   monthKey,
   monthLabel,
+  monthRangeOf,
   pickerDateFromIstDay,
   rangeFor,
   type RangePreset,
@@ -41,9 +42,15 @@ export default function DashboardScreen() {
   const [custom, setCustom] = useState<{ from: number; to: number } | null>(null);
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // A month picked from the trend chart; null means the switch's own range
+  const [pickedMonth, setPickedMonth] = useState<string | null>(null);
 
   const picked = custom ?? { from: now - 6 * DAY_MS, to: now };
-  const range = preset === 'custom' ? dayRange(picked.from, picked.to) : rangeFor(preset, now);
+  const range = pickedMonth
+    ? monthRangeOf(pickedMonth)
+    : preset === 'custom'
+      ? dayRange(picked.from, picked.to)
+      : rangeFor(preset, now);
   const names = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
 
   const slices = spendByCategory(txns, range).map((c) => ({ ...c, name: names.get(c.categoryId) ?? 'Other' }));
@@ -68,7 +75,14 @@ export default function DashboardScreen() {
     );
   }
 
-  const headline = preset === 'month' ? monthName(now) : preset === 'week' ? 'This week' : 'Custom range';
+  const headline = preset === 'month' ? monthName(range.start) : preset === 'week' ? 'This week' : 'Custom range';
+  const highlighted = pickedMonth ?? currentMonth;
+
+  const pickMonth = (key: string) => {
+    setPreset('month');
+    setShowAll(false);
+    setPickedMonth(key === currentMonth ? null : key);
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -84,6 +98,7 @@ export default function DashboardScreen() {
             onChange={(p) => {
               setPreset(p);
               setShowAll(false);
+              setPickedMonth(null);
             }}
           />
         </View>
@@ -133,8 +148,9 @@ export default function DashboardScreen() {
               key: m.month,
               label: monthLabel(m.month),
               amountPaise: m.amountPaise,
-              current: m.month === currentMonth,
+              current: m.month === highlighted,
             }))}
+            onSelect={pickMonth}
           />
         </Card>
 

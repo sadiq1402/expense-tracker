@@ -38,6 +38,12 @@ export function istDayStart(ms: number): number {
   return istMidnight(year, month, day);
 }
 
+// "2026-08" (a monthKey) → that whole month in IST
+export function monthRangeOf(key: string): DateRange {
+  const [year, month] = key.split('-').map(Number);
+  return { start: istMidnight(year, month - 1, 1), end: istMidnight(year, month, 1) };
+}
+
 export function dayRange(from: number, to: number): DateRange {
   const first = istFields(Math.min(from, to));
   const last = istFields(Math.max(from, to));

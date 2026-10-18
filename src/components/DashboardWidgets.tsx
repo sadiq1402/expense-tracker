@@ -72,18 +72,23 @@ export function MerchantRow({ merchant, amountPaise, count }: MerchantSpend) {
 
 export function TrendChart({
   months,
+  onSelect,
 }: {
   months: { key: string; label: string; amountPaise: number; current: boolean }[];
+  onSelect: (key: string) => void;
 }) {
   const max = Math.max(1, ...months.map((m) => m.amountPaise));
   return (
     <View style={styles.columns}>
       {months.map((m) => (
-        <View
+        <Pressable
           key={m.key}
           style={styles.column}
-          accessible
+          onPress={() => onSelect(m.key)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: m.current }}
           accessibilityLabel={`${m.label}, ${formatWholeRupees(m.amountPaise)}`}
+          accessibilityHint="Shows this month's spending"
         >
           <View style={styles.columnTrack}>
             <View
@@ -97,7 +102,7 @@ export function TrendChart({
             />
           </View>
           <Text style={[styles.columnLabel, m.current && styles.columnLabelCurrent]}>{m.label}</Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
