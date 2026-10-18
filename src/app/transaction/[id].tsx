@@ -1,17 +1,22 @@
 import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Text, TextInput } from '@/components/Text';
 import { Button } from '@/components/Button';
+import { SwitchRow } from '@/components/SwitchRow';
+import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
+import { Text, TextInput } from '@/components/Text';
+import { Avatar } from '@/components/TransactionRow';
 import { repo } from '@/db/repo';
 import { newCategory } from '@/domain/categorize';
-import { formatRupees, merchantLabel } from '@/domain/format';
-import type { Account, Category, Transaction } from '@/domain/types';
+import { accountLabel, formatRupees, merchantLabel } from '@/domain/format';
+import { detailMeta } from '@/domain/listing';
+import type { Account, Category, RawSms, Transaction } from '@/domain/types';
 import { toggleSelfTransfer } from '@/services/accounts';
 import { setCategory } from '@/services/categories';
-import { colors, inputStyle } from '@/theme';
+import { colors, inputStyle, radius } from '@/theme';
 
 const latestSave = async (latest: { current: Transaction | null }, changes: Partial<Transaction>) => {
   if (!latest.current) return;
@@ -25,24 +30,28 @@ export default function TransactionScreen() {
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [smsMessages, setSmsMessages] = useState<RawSms[]>([]);
+  const [showSms, setShowSms] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  // Saves build on the latest version, so a note save and an Exclude tap can't overwrite each other
+  // Saves build on the latest version, so a note save and a switch flip can't overwrite each other
   const latest = useRef<Transaction | null>(null);
   const pendingNote = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([repo.getTransaction(id), repo.categories(), repo.accounts()])
-      .then(([t, c, a]) => {
-        if (cancelled) return;
-        latest.current = t;
-        setTxn(t);
-        setCategories(c);
-        setAccounts(a);
-      })
-      .catch((e) => console.error('Loading transaction failed', e));
+    (async () => {
+      const [t, c, a] = await Promise.all([repo.getTransaction(id), repo.categories(), repo.accounts()]);
+      const sms = t && !t.isCash ? await repo.smsFor(t.sourceSmsIds) : [];
+      if (cancelled) return;
+      latest.current = t;
+      setTxn(t);
+      setCategories(c);
+      setAccounts(a);
+      setSmsMessages(sms);
+    })().catch((e) => console.error('Loading transaction failed', e));
     return () => {
       cancelled = true;
       // Back navigation can unmount without a blur, so flush an unsaved note here
@@ -66,7 +75,7 @@ export default function TransactionScreen() {
     latestSave(latest, { note: text.trim() || null }).catch((e) => console.error('Saving note failed', e));
   }
 
-  if (!txn) return <ActivityIndicator style={styles.center} />;
+  if (!txn) return <ActivityIndicator style={styles.center} color={colors.accent} />;
 
   const choose = async (categoryId: string) => {
     if (!latest.current) return;
@@ -85,89 +94,146 @@ export default function TransactionScreen() {
     setCategories([...categories, c]);
     setNewName('');
     setError(null);
+    setAdding(false);
     await choose(c.id);
   };
 
+  const account = accountLabel(txn.accountMask, new Map(accounts.map((a) => [a.mask, a.name])));
+  const missingSms = txn.sourceSmsIds.length - smsMessages.length;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.amount}>
-        {txn.direction === 'credit' ? '+' : ''}
-        {formatRupees(txn.amountPaise)}
-      </Text>
-      <Text style={styles.merchant}>{merchantLabel(txn)}</Text>
-      <Text style={styles.date}>{new Date(txn.occurredAt).toLocaleString('en-IN')}</Text>
-      {txn.accountMask ? (
-        <Text style={styles.date}>
-          {accounts.find((a) => a.mask === txn.accountMask)?.name ?? `A/c XX${txn.accountMask}`}
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.header}>
+        <Avatar txn={txn} size={56} />
+        <Text style={styles.merchant}>{merchantLabel(txn)}</Text>
+        <Text style={[styles.amount, txn.direction === 'credit' && styles.credit]}>
+          {txn.direction === 'credit' ? '+' : ''}
+          {formatRupees(txn.amountPaise)}
         </Text>
-      ) : undefined}
-
-      <Text style={styles.heading}>Category</Text>
-      <View style={styles.chips}>
-        {categories.map((c) => (
-          <Button key={c.id} label={c.name} primary={c.id === txn.categoryId} onPress={() => choose(c.id)} />
-        ))}
+        <Text style={styles.meta}>{detailMeta(txn, account, Date.now())}</Text>
       </View>
-      {txn.merchant && txn.direction === 'debit' ? (
-        <Text style={styles.hint}>Future transactions from {txn.merchant} will use the Category you pick.</Text>
-      ) : undefined}
 
-      <View style={styles.addRow}>
-        <TextInput style={styles.input} placeholder="New Category" value={newName} onChangeText={setNewName} />
-        <Button label="Add" onPress={add} />
-      </View>
-      {error ? <Text style={styles.error}>{error}</Text> : undefined}
+      <Card title="Category">
+        <View style={styles.chips}>
+          {categories.map((c) => (
+            <Button key={c.id} label={c.name} primary={c.id === txn.categoryId} onPress={() => choose(c.id)} />
+          ))}
+          {adding ? undefined : <Button label="+ New" onPress={() => setAdding(true)} />}
+        </View>
+        {adding ? (
+          <View style={styles.addRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="New Category"
+              autoFocus
+              value={newName}
+              onChangeText={setNewName}
+              onSubmitEditing={add}
+            />
+            <Button label="Add" primary onPress={add} />
+            <Button
+              label="Cancel"
+              onPress={() => {
+                setAdding(false);
+                setNewName('');
+                setError(null);
+              }}
+            />
+          </View>
+        ) : undefined}
+        {error ? <Text style={styles.error}>{error}</Text> : undefined}
+        {txn.merchant && txn.direction === 'debit' ? (
+          <Text style={styles.hint}>Future payments to {merchantLabel(txn)} will use this Category.</Text>
+        ) : undefined}
+      </Card>
 
-      <Text style={styles.heading}>Note</Text>
-      <TextInput
-        style={[styles.input, styles.note]}
-        placeholder="Add a note"
-        multiline
-        value={note ?? txn.note ?? ''}
-        onChangeText={(text) => {
-          setNote(text);
-          pendingNote.current = text;
-        }}
-        onBlur={() => pendingNote.current !== null && saveNote(pendingNote.current)}
-      />
-
-      <Text style={styles.heading}>Self-Transfer</Text>
-      <Text style={styles.hint}>
-        Money moved between your own Accounts is never counted as spending.
-        {txn.selfTransferManual ? ' You set this by hand, so re-scans leave it alone.' : ''}
-      </Text>
-      <View style={styles.addRow}>
-        <Button
-          label={txn.isSelfTransfer ? 'Not a Self-Transfer' : 'Mark as Self-Transfer'}
-          primary={txn.isSelfTransfer}
-          onPress={flipSelfTransfer}
+      <Card title="Note">
+        <TextInput
+          style={[styles.input, styles.note]}
+          placeholder="Add a note"
+          accessibilityLabel="Note"
+          multiline
+          value={note ?? txn.note ?? ''}
+          onChangeText={(text) => {
+            setNote(text);
+            pendingNote.current = text;
+          }}
+          onBlur={() => pendingNote.current !== null && saveNote(pendingNote.current)}
         />
-      </View>
+      </Card>
 
-      <Text style={styles.heading}>Excluded</Text>
-      <Text style={styles.hint}>Excluded Transactions are hidden from the Dashboard and all totals.</Text>
-      <View style={styles.addRow}>
-        <Button
-          label={txn.isExcluded ? 'Include in totals' : 'Exclude from totals'}
-          primary={txn.isExcluded}
-          onPress={() => save({ isExcluded: !txn.isExcluded })}
+      <Card style={styles.switches}>
+        <SwitchRow
+          label="Self-Transfer"
+          hint={
+            txn.selfTransferManual
+              ? 'Set by you, so re-scans leave it alone'
+              : 'Between your own Accounts — never counted'
+          }
+          value={txn.isSelfTransfer}
+          onChange={flipSelfTransfer}
+          divider
         />
-      </View>
+        <SwitchRow
+          label="Exclude from totals"
+          hint="Hidden from the Dashboard and all totals"
+          value={txn.isExcluded}
+          onChange={() => save({ isExcluded: !txn.isExcluded })}
+        />
+      </Card>
+
+      {smsMessages.length > 0 ? (
+        <View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showSms }}
+            onPress={() => setShowSms(!showSms)}
+            style={styles.smsToggle}
+          >
+            <Text style={styles.smsToggleText}>
+              Original SMS · {smsMessages.length} message{smsMessages.length === 1 ? '' : 's'}
+            </Text>
+            <Icon name={showSms ? 'expand_less' : 'expand_more'} size={20} color={colors.muted} />
+          </Pressable>
+          {showSms
+            ? smsMessages.map((s) => (
+                <View key={s.id} style={styles.sms}>
+                  <Text style={styles.smsSender}>{s.sender}</Text>
+                  <Text style={styles.smsBody} selectable>
+                    {s.body}
+                  </Text>
+                </View>
+              ))
+            : undefined}
+          {showSms && missingSms > 0 ? (
+            <Text style={styles.hint}>
+              {missingSms} older message{missingSms === 1 ? ' wasn’t' : 's weren’t'} kept.
+            </Text>
+          ) : undefined}
+        </View>
+      ) : undefined}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  container: { padding: 16, gap: 8 },
-  amount: { fontSize: 28, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  merchant: { fontSize: 18 },
-  date: { color: colors.muted },
-  heading: { marginTop: 16, fontSize: 16, fontWeight: '600' },
+  container: { padding: 20, gap: 16 },
+  header: { alignItems: 'center', gap: 6, paddingBottom: 4 },
+  merchant: { fontSize: 17, fontWeight: '700', marginTop: 4 },
+  amount: { fontSize: 38, fontWeight: '800', letterSpacing: -1 },
+  credit: { color: colors.credit },
+  meta: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hint: { color: colors.muted, fontSize: 12 },
-  addRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  addRow: { flexDirection: 'row', gap: 8 },
   input: { ...inputStyle, flex: 1 },
   error: { color: colors.danger },
   note: { minHeight: 64, textAlignVertical: 'top' },
+  switches: { paddingVertical: 4, gap: 0 },
+  smsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  smsToggleText: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  sms: { backgroundColor: colors.surface, borderRadius: radius.control, padding: 12, marginTop: 8, gap: 4 },
+  smsSender: { fontSize: 12, fontWeight: '700', color: colors.muted },
+  smsBody: { fontSize: 13, lineHeight: 19 },
 });

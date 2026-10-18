@@ -1,6 +1,6 @@
 import { spendOf } from '@/domain/aggregate';
 import { DAY_MS, istDayStart, istFields, MONTH_LABELS } from '@/domain/dateRange';
-import type { Transaction } from '@/domain/types';
+import type { Channel, Transaction } from '@/domain/types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -65,4 +65,18 @@ const REASON_TEXT: Record<string, string> = { 'amount not found': 'We couldn’t
 export function reviewSummary(reasons: string[]): string {
   const unique = [...new Set(reasons)];
   return unique.length === 1 ? (REASON_TEXT[unique[0]] ?? unique[0]) : 'Tap to check them';
+}
+
+const CHANNEL_LABELS: Record<Channel, string | null> = {
+  upi: 'UPI',
+  card: 'Card',
+  atm: 'ATM',
+  neft_imps: 'NEFT/IMPS',
+  autodebit: 'Auto-debit',
+  other: null,
+};
+
+export function detailMeta(t: Transaction, account: string | null, now: number): string {
+  const channel = t.isCash ? 'Cash' : CHANNEL_LABELS[t.channel];
+  return [dateLabel(t.occurredAt, now), timeLabel(t.occurredAt), channel, account].filter(Boolean).join(' · ');
 }

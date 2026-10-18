@@ -8,18 +8,21 @@ import type { RowTone } from '@/domain/listing';
 import type { Transaction } from '@/domain/types';
 import { categoryVisual, colors, NEUTRAL_VISUAL, radius } from '@/theme';
 
-function Avatar({ txn }: { txn: Transaction }) {
+// Avatars scale with their size; the 40px list avatar keeps radius.avatar exactly
+const sized = (size: number) => ({ width: size, height: size, borderRadius: (radius.avatar * size) / 40 });
+
+export function Avatar({ txn, size = 40 }: { txn: Transaction; size?: number }) {
   if (txn.isSelfTransfer || txn.isCash) {
     return (
-      <View style={[styles.avatar, { backgroundColor: NEUTRAL_VISUAL.tint }]}>
-        <Icon name={txn.isSelfTransfer ? 'sync_alt' : 'payments'} size={20} color={NEUTRAL_VISUAL.color} />
+      <View style={[styles.avatar, sized(size), { backgroundColor: NEUTRAL_VISUAL.tint }]}>
+        <Icon name={txn.isSelfTransfer ? 'sync_alt' : 'payments'} size={size / 2} color={NEUTRAL_VISUAL.color} />
       </View>
     );
   }
   const v = categoryVisual(txn.categoryId);
   return (
-    <View style={[styles.avatar, { backgroundColor: v.tint }]}>
-      <Text style={[styles.initial, { color: v.color }]}>{merchantLabel(txn).charAt(0)}</Text>
+    <View style={[styles.avatar, sized(size), { backgroundColor: v.tint }]}>
+      <Text style={[styles.initial, { color: v.color, fontSize: size * 0.38 }]}>{merchantLabel(txn).charAt(0)}</Text>
     </View>
   );
 }
@@ -71,8 +74,8 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.line },
-  avatar: { width: 40, height: 40, borderRadius: radius.avatar, alignItems: 'center', justifyContent: 'center' },
-  initial: { fontSize: 15, fontWeight: '800' },
+  avatar: { alignItems: 'center', justifyContent: 'center' },
+  initial: { fontWeight: '800' },
   flex: { flex: 1, gap: 2 },
   title: { fontSize: 15, fontWeight: '700' },
   mutedTitle: { color: colors.subtle },

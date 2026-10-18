@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
 import { TransactionRow } from '@/components/TransactionRow';
-import { formatSignedRupees } from '@/domain/format';
+import { accountLabel, formatSignedRupees } from '@/domain/format';
 import { describeRow, groupByDay, reviewSummary } from '@/domain/listing';
 import { useLedger } from '@/hooks/useLedger';
 import { colors, radius } from '@/theme';
@@ -29,8 +29,6 @@ export default function TransactionsScreen() {
       </View>
     );
   }
-
-  const accountLabel = (mask: string | null) => (mask ? (accountNames.get(mask) ?? `··${mask}`) : null);
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -74,7 +72,7 @@ export default function TransactionsScreen() {
         renderItem={({ item, index, section }) => {
           const { subtitle, tone } = describeRow(item, {
             category: item.categoryId ? (categoryNames.get(item.categoryId) ?? null) : null,
-            account: accountLabel(item.accountMask),
+            account: accountLabel(item.accountMask, accountNames),
           });
           const first = index === 0;
           const last = index === section.data.length - 1;
