@@ -19,7 +19,11 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <Icon name="bar_chart" color={color} /> }}
+        options={{
+          title: 'Dashboard',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <Icon name="bar_chart" color={color} />,
+        }}
       />
       <Tabs.Screen
         name="transactions"

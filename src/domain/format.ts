@@ -10,6 +10,10 @@ export function formatRupees(paise: number): string {
   return `₹${grouped}${fraction ? `.${fraction.toString().padStart(2, '0')}` : ''}`;
 }
 
+export function formatSignedRupees(paise: number): string {
+  return paise < 0 ? `−${formatRupees(-paise)}` : formatRupees(paise);
+}
+
 // Accepts "1,23,456.50"-style input; null for anything that isn't a positive rupee amount
 export function rupeesToPaise(amount: string): number | null {
   const m = amount.trim().replace(/,/g, '').match(/^(\d+)(?:\.(\d{1,2}))?$/);
