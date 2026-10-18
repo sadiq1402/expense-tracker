@@ -1,4 +1,4 @@
-import { monthlyTrend, spendByCategory, topMerchants, totalSpend } from '@/domain/aggregate';
+import { monthlyTrend, spendByCategory, splitTop, topMerchants, totalSpend, trendAverage } from '@/domain/aggregate';
 import { dayRange, istDayFromPicker, monthLabel, pickerDateFromIstDay, rangeFor } from '@/domain/dateRange';
 import { classifyCredit } from '@/domain/categorize';
 import type { Transaction } from '@/domain/types';
@@ -176,5 +176,22 @@ describe('topMerchants', () => {
       { merchant: 'UBER', amountPaise: 40000, count: 1 },
       { merchant: 'SWIGGY', amountPaise: 15000, count: 2 },
     ]);
+  });
+});
+
+describe('trendAverage', () => {
+  test('averages the months, rounding to whole paise', () => {
+    expect(trendAverage([{ amountPaise: 100 }, { amountPaise: 201 }])).toBe(151);
+  });
+
+  test('is zero for no months', () => {
+    expect(trendAverage([])).toBe(0);
+  });
+});
+
+describe('splitTop', () => {
+  test('keeps the first N and counts the rest', () => {
+    expect(splitTop([1, 2, 3, 4, 5, 6], 4)).toEqual({ top: [1, 2, 3, 4], rest: [5, 6] });
+    expect(splitTop([1, 2], 4)).toEqual({ top: [1, 2], rest: [] });
   });
 });

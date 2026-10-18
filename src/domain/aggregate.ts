@@ -44,7 +44,13 @@ export function monthlyTrend(txns: Transaction[], months: number, now: number) {
   });
 }
 
-export function topMerchants(txns: Transaction[], range: DateRange, limit: number) {
+export interface MerchantSpend {
+  merchant: string;
+  amountPaise: number;
+  count: number;
+}
+
+export function topMerchants(txns: Transaction[], range: DateRange, limit: number): MerchantSpend[] {
   const inWindow = txns.filter((t) => inRange(t, range) && t.merchant);
   const totals = sumBy(inWindow, (t) => t.merchant);
   const counts = new Map<string, number>();
@@ -56,4 +62,13 @@ export function topMerchants(txns: Transaction[], range: DateRange, limit: numbe
     .map(([merchant, amountPaise]) => ({ merchant, amountPaise, count: counts.get(merchant) ?? 0 }))
     .sort((a, b) => b.amountPaise - a.amountPaise)
     .slice(0, limit);
+}
+
+export function trendAverage(trend: { amountPaise: number }[]): number {
+  if (trend.length === 0) return 0;
+  return Math.round(trend.reduce((sum, m) => sum + m.amountPaise, 0) / trend.length);
+}
+
+export function splitTop<T>(items: T[], n: number): { top: T[]; rest: T[] } {
+  return { top: items.slice(0, n), rest: items.slice(n) };
 }

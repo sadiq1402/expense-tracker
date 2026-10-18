@@ -1,0 +1,146 @@
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { Icon } from '@/components/Icon';
+import { Text } from '@/components/Text';
+import type { MerchantSpend } from '@/domain/aggregate';
+import { formatRupees } from '@/domain/format';
+import { categoryVisual, colors, radius } from '@/theme';
+
+export interface CategorySlice {
+  categoryId: string;
+  name: string;
+  amountPaise: number;
+}
+
+// Fading white by rank keeps segments apart by lightness on the accent card; the rows below carry the detail
+const SPLIT_OPACITY = [1, 0.75, 0.55, 0.4, 0.28];
+
+export function SplitBar({ slices }: { slices: CategorySlice[] }) {
+  if (slices.length === 0) return null;
+  return (
+    <View style={styles.split} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {slices.map((s, i) => (
+        <View
+          key={s.categoryId}
+          style={{
+            flex: s.amountPaise,
+            backgroundColor: colors.onAccent,
+            opacity: SPLIT_OPACITY[Math.min(i, SPLIT_OPACITY.length - 1)],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+export function CategoryRow({ slice, max }: { slice: CategorySlice; max: number }) {
+  const v = categoryVisual(slice.categoryId);
+  return (
+    <View style={styles.row} accessible accessibilityLabel={`${slice.name}, ${formatRupees(slice.amountPaise)}`}>
+      <View style={[styles.badge, { backgroundColor: v.tint }]}>
+        <Icon name={v.icon} size={18} color={v.color} />
+      </View>
+      <View style={styles.flex}>
+        <View style={styles.labelRow}>
+          <Text style={styles.label} numberOfLines={1}>
+            {slice.name}
+          </Text>
+          <Text style={styles.value}>{formatRupees(slice.amountPaise)}</Text>
+        </View>
+        <View style={styles.track}>
+          <View style={[styles.fill, { width: `${(slice.amountPaise / max) * 100}%`, backgroundColor: v.color }]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function MerchantRow({
+  merchant,
+  amountPaise,
+  count,
+}: {
+  merchant: string;
+  amountPaise: number;
+  count: number;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={[styles.badge, { backgroundColor: colors.track }]}>
+        <Text style={styles.initial}>{merchant.charAt(0)}</Text>
+      </View>
+      <View style={styles.flex}>
+        <Text style={styles.label} numberOfLines={1}>
+          {merchant}
+        </Text>
+        <Text style={styles.sub}>
+          {count} payment{count === 1 ? '' : 's'}
+        </Text>
+      </View>
+      <Text style={styles.value}>{formatRupees(amountPaise)}</Text>
+    </View>
+  );
+}
+
+export function TrendChart({
+  months,
+}: {
+  months: { key: string; label: string; amountPaise: number; current: boolean }[];
+}) {
+  const max = Math.max(1, ...months.map((m) => m.amountPaise));
+  return (
+    <View style={styles.columns}>
+      {months.map((m) => (
+        <View
+          key={m.key}
+          style={styles.column}
+          accessible
+          accessibilityLabel={`${m.label}, ${formatRupees(m.amountPaise)}`}
+        >
+          <View style={styles.columnTrack}>
+            <View
+              style={[
+                styles.columnFill,
+                {
+                  height: `${(m.amountPaise / max) * 100}%`,
+                  backgroundColor: m.current ? colors.accent : colors.border,
+                },
+              ]}
+            />
+          </View>
+          <Text style={[styles.columnLabel, m.current && styles.columnLabelCurrent]}>{m.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function MoreButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.more}>
+      <Text style={styles.moreText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  split: { flexDirection: 'row', gap: 4, height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  badge: { width: 36, height: 36, borderRadius: radius.avatar, alignItems: 'center', justifyContent: 'center' },
+  initial: { fontSize: 15, fontWeight: '800', color: colors.subtle },
+  flex: { flex: 1, gap: 6 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  label: { flexShrink: 1, fontSize: 14, fontWeight: '600' },
+  value: { fontSize: 14, fontWeight: '700' },
+  sub: { fontSize: 12, color: colors.muted, marginTop: -4 },
+  track: { height: 6, borderRadius: 3, backgroundColor: colors.track },
+  fill: { height: 6, borderRadius: 3 },
+  columns: { flexDirection: 'row', gap: 10, height: 110 },
+  column: { flex: 1, alignItems: 'center', gap: 6 },
+  columnTrack: { flex: 1, width: '100%', justifyContent: 'flex-end' },
+  columnFill: { width: '100%', borderRadius: 6, minHeight: 2 },
+  columnLabel: { fontSize: 11, color: colors.muted },
+  columnLabelCurrent: { fontWeight: '700', color: colors.ink },
+  more: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  moreText: { fontSize: 13, fontWeight: '700', color: colors.accent },
+});
