@@ -2,7 +2,7 @@ import { monthKey, monthStarts, type DateRange } from '@/domain/dateRange';
 import type { Transaction } from '@/domain/types';
 
 // Spend = Expenses minus Refunds; everything else contributes nothing
-const spendOf = (t: Transaction) => {
+export const spendOf = (t: Transaction) => {
   if (t.isExcluded || t.isSelfTransfer) return 0;
   if (t.direction === 'debit') return t.amountPaise;
   return t.isRefund ? -t.amountPaise : 0;

@@ -16,6 +16,7 @@ export const colors = {
   credit: '#0B6E5F', // same as accent today; kept separate so money-in can change colour on its own
   warnBg: '#FFF4DE',
   warnInk: '#6B4300',
+  warnTint: '#FFE3A8',
   danger: '#B3261E',
 };
 

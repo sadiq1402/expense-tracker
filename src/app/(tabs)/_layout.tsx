@@ -27,7 +27,11 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="transactions"
-        options={{ title: 'Transactions', tabBarIcon: ({ color }) => <Icon name="receipt_long" color={color} /> }}
+        options={{
+          title: 'Transactions',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <Icon name="receipt_long" color={color} />,
+        }}
       />
       <Tabs.Screen
         name="settings"

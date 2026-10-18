@@ -4,7 +4,7 @@ import { AppState } from 'react-native';
 
 import { addInboxListener, requestPermission } from '../../modules/sms-reader';
 import { repo } from '@/db/repo';
-import type { Category, Transaction } from '@/domain/types';
+import type { Account, Category, Transaction } from '@/domain/types';
 import { runIngestion } from '@/services/ingestion';
 
 export type LedgerStatus = 'loading' | 'denied' | 'error' | 'ready';
@@ -13,12 +13,22 @@ export interface Ledger {
   status: LedgerStatus;
   txns: Transaction[];
   categories: Category[];
+  accounts: Account[];
   reviewCount: number;
+  reviewReasons: string[];
   // When this snapshot was loaded; screens use it as "now" so render stays pure
   loadedAt: number;
 }
 
-const INITIAL: Ledger = { status: 'loading', txns: [], categories: [], reviewCount: 0, loadedAt: 0 };
+const INITIAL: Ledger = {
+  status: 'loading',
+  txns: [],
+  categories: [],
+  accounts: [],
+  reviewCount: 0,
+  reviewReasons: [],
+  loadedAt: 0,
+};
 
 // Re-scans and reloads on focus, on return to the foreground and whenever a new SMS lands
 export function useLedger(): Ledger {
@@ -35,13 +45,22 @@ export function useLedger(): Ledger {
             return;
           }
           await runIngestion();
-          const [txns, needsReview, categories] = await Promise.all([
+          const [txns, needsReview, categories, accounts] = await Promise.all([
             repo.allTransactions(),
             repo.listNeedsReview(),
             repo.categories(),
+            repo.accounts(),
           ]);
           if (!cancelled)
-            setLedger({ status: 'ready', txns, categories, reviewCount: needsReview.length, loadedAt: Date.now() });
+            setLedger({
+              status: 'ready',
+              txns,
+              categories,
+              accounts,
+              reviewCount: needsReview.length,
+              reviewReasons: needsReview.map((r) => r.reason),
+              loadedAt: Date.now(),
+            });
         } catch (e) {
           console.error('Ingestion failed', e);
           if (!cancelled) setLedger((l) => ({ ...l, status: 'error' }));

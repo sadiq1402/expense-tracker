@@ -55,15 +55,7 @@ export function CategoryRow({ slice, max }: { slice: CategorySlice; max: number 
   );
 }
 
-export function MerchantRow({
-  merchant,
-  amountPaise,
-  count,
-}: {
-  merchant: string;
-  amountPaise: number;
-  count: number;
-}) {
+export function MerchantRow({ merchant, amountPaise, count }: MerchantSpend) {
   return (
     <View style={styles.row}>
       <View style={[styles.badge, { backgroundColor: colors.track }]}>

@@ -11,9 +11,16 @@ const IST_OFFSET_MS = (5 * 60 + 30) * 60_000;
 export const DAY_MS = 24 * 60 * 60_000;
 
 // UTC getters on the shifted Date read IST wall-clock fields
-const istFields = (ms: number) => {
+export const istFields = (ms: number) => {
   const d = new Date(ms + IST_OFFSET_MS);
-  return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate(), weekday: d.getUTCDay() };
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth(),
+    day: d.getUTCDate(),
+    weekday: d.getUTCDay(),
+    hour: d.getUTCHours(),
+    minute: d.getUTCMinutes(),
+  };
 };
 
 // Date.UTC normalizes overflow, so month 12 or day 0 roll over correctly
@@ -24,6 +31,11 @@ export function rangeFor(preset: Exclude<RangePreset, 'custom'>, now: number): D
   if (preset === 'month') return { start: istMidnight(year, month, 1), end: istMidnight(year, month + 1, 1) };
   const start = istMidnight(year, month, day - ((weekday + 6) % 7));
   return { start, end: start + 7 * DAY_MS };
+}
+
+export function istDayStart(ms: number): number {
+  const { year, month, day } = istFields(ms);
+  return istMidnight(year, month, day);
 }
 
 export function dayRange(from: number, to: number): DateRange {
@@ -45,7 +57,7 @@ export function monthStarts(months: number, now: number): number[] {
   return Array.from({ length: months }, (_, i) => istMidnight(year, month - (months - 1 - i), 1));
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function monthLabel(key: string): string {
   return MONTH_LABELS[Number(key.slice(5)) - 1];
