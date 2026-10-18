@@ -1,5 +1,6 @@
 import { monthlyTrend, spendByCategory, topMerchants, totalSpend } from '@/domain/aggregate';
 import { dayRange, istDayFromPicker, monthLabel, pickerDateFromIstDay, rangeFor } from '@/domain/dateRange';
+import { classifyCredit } from '@/domain/categorize';
 import type { Transaction } from '@/domain/types';
 
 const ist = (iso: string) => Date.parse(`${iso}+05:30`);
@@ -112,6 +113,13 @@ describe('spendByCategory', () => {
       txn({ amountPaise: 80000, isSelfTransfer: true }),
     ];
     expect(spendByCategory(txns, OCTOBER)).toEqual([{ categoryId: 'food', amountPaise: 30000 }]);
+  });
+
+  test('Amazon debit ₹2,000 then Amazon credit ₹500 → Shopping spend ₹1,500', () => {
+    const purchase = txn({ merchant: 'AMAZON', amountPaise: 200000, categoryId: 'shopping' });
+    const credit = txn({ merchant: 'AMAZON', amountPaise: 50000, direction: 'credit', categoryId: null });
+    const refund = { ...credit, ...classifyCredit(credit, [purchase]) };
+    expect(spendByCategory([purchase, refund], OCTOBER)).toEqual([{ categoryId: 'shopping', amountPaise: 150000 }]);
   });
 
   test('Cash Transactions count', () => {

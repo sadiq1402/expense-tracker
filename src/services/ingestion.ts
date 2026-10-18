@@ -2,7 +2,7 @@ import { randomUUID } from 'expo-crypto';
 
 import { readInbox } from '../../modules/sms-reader';
 import { repo, type NeedsReviewItem } from '@/db/repo';
-import { categorize } from '@/domain/categorize';
+import { categorize, classifyCredit } from '@/domain/categorize';
 import { mergeIntoExisting } from '@/domain/ingest';
 import { parseSms } from '@/domain/parseSms';
 import { nextCheckpoint, scanSince } from '@/domain/scanWindow';
@@ -16,6 +16,14 @@ let queued: Promise<IngestResult> | null = null;
 // Never overwrites a Category the user (or an earlier run) already set
 const withCategory = (txns: Transaction[], rules: MerchantRule[]) =>
   txns.map((t) => (t.categoryId ? t : { ...t, categoryId: categorize(t, rules) }));
+
+const isUnclassifiedCredit = (t: Transaction) => t.direction === 'credit' && !t.isRefund && !t.categoryId;
+
+// Fresh copies in `txns` override their stale stored versions in the history
+const withRefunds = (txns: Transaction[], stored: Transaction[]) => {
+  const history = [...new Map([...stored, ...txns].map((t) => [t.id, t])).values()];
+  return txns.map((t) => (isUnclassifiedCredit(t) ? { ...t, ...classifyCredit(t, history) } : t));
+};
 
 async function ingest() {
   const last = await repo.getMeta('lastSmsAt');
@@ -34,7 +42,11 @@ async function ingest() {
   const touched = new Set(updated.map((t) => t.id));
   // Also picks up debits stored before categorization existed
   const backlog = existing.filter((t) => !t.categoryId && t.direction === 'debit' && !touched.has(t.id));
-  await repo.upsertTransactions(withCategory([...created, ...updated, ...backlog], await repo.userRules()));
+  const categorized = withCategory([...created, ...updated, ...backlog], await repo.userRules());
+  // Stored credits are re-checked too, so refunds ingested before Refund detection are picked up
+  const credits = existing.filter((t) => isUnclassifiedCredit(t) && !touched.has(t.id));
+  const classified = withRefunds([...categorized, ...credits], existing);
+  await repo.upsertTransactions(classified.filter((t, i) => i < categorized.length || t.isRefund));
   await repo.addNeedsReview(review);
   if (inbox.length > 0) {
     await repo.setMeta('lastSmsAt', String(nextCheckpoint(inbox.map((s) => s.receivedAt), Date.now())));
@@ -54,7 +66,8 @@ export async function createFromReview(sms: RawSms, input: Pick<ParsedTxn, 'amou
   };
   // Merged against nothing: the user is asserting this SMS is its own Transaction
   const { created } = mergeIntoExisting([], [txn], randomUUID);
-  await repo.upsertTransactions(withCategory(created, await repo.userRules()));
+  const categorized = withCategory(created, await repo.userRules());
+  await repo.upsertTransactions(withRefunds(categorized, await repo.allTransactions()));
   await repo.resolveNeedsReview(sms.id);
 }
 
