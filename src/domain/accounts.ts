@@ -1,0 +1,66 @@
+import type { Account, Transaction } from '@/domain/types';
+
+const SELF_TRANSFER_WINDOW_MS = 10 * 60_000;
+
+export function discoverAccounts(txns: Transaction[], known: Account[], newId: () => string): Account[] {
+  const seen = new Set(known.map((a) => a.mask));
+  const found: Account[] = [];
+  for (const { accountMask: mask } of txns) {
+    if (!mask || seen.has(mask)) continue;
+    seen.add(mask);
+    found.push({ id: newId(), mask, name: `A/c XX${mask}`, confirmed: false });
+  }
+  return found;
+}
+
+// Banks print 3 or 4 trailing digits for the same Account ("901" vs "1901")
+const sameAccount = (a: string, b: string) => a.endsWith(b) || b.endsWith(a);
+
+const gap = (a: Transaction, b: Transaction) => Math.abs(a.occurredAt - b.occurredAt);
+
+const canPair = (debit: Transaction, credit: Transaction) =>
+  debit.direction === 'debit' &&
+  credit.direction === 'credit' &&
+  debit.amountPaise === credit.amountPaise &&
+  !!debit.accountMask &&
+  !!credit.accountMask &&
+  !sameAccount(debit.accountMask, credit.accountMask) &&
+  gap(debit, credit) <= SELF_TRANSFER_WINDOW_MS;
+
+// Manual choices and existing pairs are out of the pool, so a re-scan can never override or re-pair them
+const candidate = (t: Transaction) => !t.selfTransferManual && !t.isSelfTransfer && !t.isCash && !!t.accountMask;
+
+// A Self-Transfer credit is never a Refund, so unmarking it later can't resurrect a stale Refund
+const asSelfTransfer = (t: Transaction): Transaction =>
+  t.direction === 'credit'
+    ? { ...t, isSelfTransfer: true, isRefund: false, categoryId: null }
+    : { ...t, isSelfTransfer: true };
+
+export function markSelfTransfers(txns: Transaction[]): Transaction[] {
+  const pool = txns.filter(candidate);
+  const debits = pool.filter((t) => t.direction === 'debit');
+  const credits = pool.filter((t) => t.direction === 'credit');
+  // Closest pairs first across the whole set, so the result doesn't depend on input order
+  const pairs = debits
+    .flatMap((d) => credits.filter((c) => canPair(d, c)).map((c) => [d, c] as const))
+    .sort(([d1, c1], [d2, c2]) => gap(d1, c1) - gap(d2, c2));
+
+  const used = new Set<string>();
+  const changed: Transaction[] = [];
+  for (const [d, c] of pairs) {
+    if (used.has(d.id) || used.has(c.id)) continue;
+    used.add(d.id).add(c.id);
+    changed.push(asSelfTransfer(d), asSelfTransfer(c));
+  }
+  return changed;
+}
+
+// The other half of a pair, so a manual mark/unmark keeps both sides in step
+export function selfTransferPartner(txn: Transaction, txns: Transaction[]): Transaction | null {
+  return (
+    txns
+      .filter((t) => t.id !== txn.id && t.isSelfTransfer === txn.isSelfTransfer && !t.isCash)
+      .filter((t) => (txn.direction === 'debit' ? canPair(txn, t) : canPair(t, txn)))
+      .sort((a, b) => gap(a, txn) - gap(b, txn))[0] ?? null
+  );
+}

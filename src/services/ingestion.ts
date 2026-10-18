@@ -2,6 +2,7 @@ import { randomUUID } from 'expo-crypto';
 
 import { readInbox } from '../../modules/sms-reader';
 import { repo, type NeedsReviewItem } from '@/db/repo';
+import { discoverAccounts, markSelfTransfers } from '@/domain/accounts';
 import { categorize, classifyCredit } from '@/domain/categorize';
 import { mergeIntoExisting } from '@/domain/ingest';
 import { parseSms } from '@/domain/parseSms';
@@ -25,6 +26,15 @@ const withRefunds = (txns: Transaction[], stored: Transaction[]) => {
   return txns.map((t) => (isUnclassifiedCredit(t) ? { ...t, ...classifyCredit(t, history) } : t));
 };
 
+// Runs over everything stored so a pair split across two scans is still found
+async function withAccountsAndSelfTransfers(existing: Transaction[], toSave: Transaction[]) {
+  const all = [...new Map([...existing, ...toSave].map((t) => [t.id, t])).values()];
+  await repo.upsertAccounts(discoverAccounts(all, await repo.accounts(), randomUUID));
+  const merged = new Map(toSave.map((t) => [t.id, t]));
+  for (const t of markSelfTransfers(all)) merged.set(t.id, t);
+  return [...merged.values()];
+}
+
 async function ingest() {
   const last = await repo.getMeta('lastSmsAt');
   const inbox = await readInbox(scanSince(last === null ? null : Number(last), Date.now()));
@@ -46,7 +56,8 @@ async function ingest() {
   // Stored credits are re-checked too, so refunds ingested before Refund detection are picked up
   const credits = existing.filter((t) => isUnclassifiedCredit(t) && !touched.has(t.id));
   const classified = withRefunds([...categorized, ...credits], existing);
-  await repo.upsertTransactions(classified.filter((t, i) => i < categorized.length || t.isRefund));
+  const toSave = classified.filter((t, i) => i < categorized.length || t.isRefund);
+  await repo.upsertTransactions(await withAccountsAndSelfTransfers(existing, toSave));
   await repo.addNeedsReview(review);
   if (inbox.length > 0) {
     await repo.setMeta('lastSmsAt', String(nextCheckpoint(inbox.map((s) => s.receivedAt), Date.now())));

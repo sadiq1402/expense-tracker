@@ -1,6 +1,6 @@
 import { getDb } from '@/db/client';
 import { DEFAULT_CATEGORIES } from '@/domain/categorize';
-import type { Category, MerchantRule, RawSms, Transaction } from '@/domain/types';
+import type { Account, Category, MerchantRule, RawSms, Transaction } from '@/domain/types';
 
 export interface NeedsReviewItem {
   sms: RawSms;
@@ -90,6 +90,29 @@ export const repo = {
       r.merchant,
       r.categoryId,
     ]);
+  },
+
+  async accounts(): Promise<Account[]> {
+    const db = await getDb();
+    const rows = await db.getAllAsync<{ id: string; mask: string; name: string; confirmed: number }>(
+      'SELECT id, mask, name, confirmed FROM accounts ORDER BY name',
+    );
+    return rows.map((r) => ({ ...r, confirmed: r.confirmed === 1 }));
+  },
+
+  async upsertAccounts(accounts: Account[]) {
+    if (accounts.length === 0) return;
+    const db = await getDb();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      for (const a of accounts) {
+        await txn.runAsync('INSERT OR REPLACE INTO accounts (id, mask, name, confirmed) VALUES (?, ?, ?, ?)', [
+          a.id,
+          a.mask,
+          a.name,
+          a.confirmed ? 1 : 0,
+        ]);
+      }
+    });
   },
 
   async getMeta(key: MetaKey): Promise<string | null> {

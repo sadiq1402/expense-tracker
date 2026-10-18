@@ -7,7 +7,8 @@ import { Button } from '@/components/Button';
 import { repo } from '@/db/repo';
 import { newCategory } from '@/domain/categorize';
 import { formatRupees, merchantLabel } from '@/domain/format';
-import type { Category, Transaction } from '@/domain/types';
+import type { Account, Category, Transaction } from '@/domain/types';
+import { toggleSelfTransfer } from '@/services/accounts';
 import { setCategory } from '@/services/categories';
 
 const latestSave = async (latest: { current: Transaction | null }, changes: Partial<Transaction>) => {
@@ -21,6 +22,7 @@ export default function TransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -30,12 +32,13 @@ export default function TransactionScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([repo.getTransaction(id), repo.categories()])
-      .then(([t, c]) => {
+    Promise.all([repo.getTransaction(id), repo.categories(), repo.accounts()])
+      .then(([t, c, a]) => {
         if (cancelled) return;
         latest.current = t;
         setTxn(t);
         setCategories(c);
+        setAccounts(a);
       })
       .catch((e) => console.error('Loading transaction failed', e));
     return () => {
@@ -48,6 +51,12 @@ export default function TransactionScreen() {
   const save = async (changes: Partial<Transaction>) => {
     const next = await latestSave(latest, changes);
     if (next) setTxn(next);
+  };
+
+  const flipSelfTransfer = async () => {
+    if (!latest.current) return;
+    latest.current = await toggleSelfTransfer(latest.current);
+    setTxn(latest.current);
   };
 
   function saveNote(text: string) {
@@ -85,6 +94,11 @@ export default function TransactionScreen() {
       </Text>
       <Text style={styles.merchant}>{merchantLabel(txn)}</Text>
       <Text style={styles.date}>{new Date(txn.occurredAt).toLocaleString('en-IN')}</Text>
+      {txn.accountMask ? (
+        <Text style={styles.date}>
+          {accounts.find((a) => a.mask === txn.accountMask)?.name ?? `A/c XX${txn.accountMask}`}
+        </Text>
+      ) : undefined}
 
       <Text style={styles.heading}>Category</Text>
       <View style={styles.chips}>
@@ -114,6 +128,19 @@ export default function TransactionScreen() {
         }}
         onBlur={() => pendingNote.current !== null && saveNote(pendingNote.current)}
       />
+
+      <Text style={styles.heading}>Self-Transfer</Text>
+      <Text style={styles.hint}>
+        Money moved between your own Accounts is never counted as spending.
+        {txn.selfTransferManual ? ' You set this by hand, so re-scans leave it alone.' : ''}
+      </Text>
+      <View style={styles.addRow}>
+        <Button
+          label={txn.isSelfTransfer ? 'Not a Self-Transfer' : 'Mark as Self-Transfer'}
+          primary={txn.isSelfTransfer}
+          onPress={flipSelfTransfer}
+        />
+      </View>
 
       <Text style={styles.heading}>Excluded</Text>
       <Text style={styles.hint}>Excluded Transactions are hidden from the Dashboard and all totals.</Text>
