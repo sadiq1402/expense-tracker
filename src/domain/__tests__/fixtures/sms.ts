@@ -11,6 +11,7 @@ export const sms = (id: string, sender: string, body: string): RawSms => ({
 
 const txn = (
   id: string,
+  sourceSender: string,
   direction: Direction,
   channel: Channel,
   amountPaise: number,
@@ -19,7 +20,7 @@ const txn = (
   merchant: string | null,
 ): ParseResult => ({
   kind: 'transaction',
-  txn: { amountPaise, direction, occurredAt: AT, accountMask, upiRef, merchant, channel, sourceSmsId: id },
+  txn: { amountPaise, direction, occurredAt: AT, accountMask, upiRef, merchant, channel, sourceSmsId: id, sourceSender },
 });
 
 type Fixture = { name: string; sms: RawSms; expected: ParseResult };
@@ -29,8 +30,8 @@ const fixture = (
   id: string,
   sender: string,
   body: string,
-  ...rest: Parameters<typeof txn> extends [string, ...infer R] ? R : never
-): Fixture => ({ name, sms: sms(id, sender, body), expected: txn(id, ...rest) });
+  ...rest: Parameters<typeof txn> extends [string, string, ...infer R] ? R : never
+): Fixture => ({ name, sms: sms(id, sender, body), expected: txn(id, sender, ...rest) });
 
 export const transactionFixtures: Fixture[] = [
   fixture(

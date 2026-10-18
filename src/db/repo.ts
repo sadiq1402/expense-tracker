@@ -12,7 +12,8 @@ export const repo = {
   async allTransactions(): Promise<Transaction[]> {
     const db = await getDb();
     const rows = await db.getAllAsync<{ data: string }>('SELECT data FROM transactions ORDER BY occurred_at DESC');
-    return rows.map((r) => JSON.parse(r.data));
+    // Rows written before sender tracking lack sourceSenders
+    return rows.map((r) => ({ sourceSenders: [], ...JSON.parse(r.data) }));
   },
 
   async upsertTransactions(txns: Transaction[]) {

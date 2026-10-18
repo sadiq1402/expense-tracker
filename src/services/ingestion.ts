@@ -7,7 +7,10 @@ import { parseSms } from '@/domain/parseSms';
 import { nextCheckpoint, scanSince } from '@/domain/scanWindow';
 import type { ParsedTxn, RawSms } from '@/domain/types';
 
-let running: Promise<{ added: number; review: number }> | null = null;
+type IngestResult = { added: number; review: number };
+
+let running: Promise<IngestResult> | null = null;
+let queued: Promise<IngestResult> | null = null;
 
 async function ingest() {
   const last = await repo.getMeta('lastSmsAt');
@@ -37,15 +40,26 @@ export async function createFromReview(sms: RawSms, input: Pick<ParsedTxn, 'amou
     upiRef: null,
     channel: 'other',
     sourceSmsId: sms.id,
+    sourceSender: sms.sender,
   };
-  const { created } = mergeIntoExisting(await repo.allTransactions(), [txn], randomUUID);
+  // Merged against nothing: the user is asserting this SMS is its own Transaction
+  const { created } = mergeIntoExisting([], [txn], randomUUID);
   await repo.upsertTransactions(created);
   await repo.resolveNeedsReview(sms.id);
 }
 
-// Concurrent callers share one in-flight run
-export function runIngestion() {
-  running ??= ingest().finally(() => {
+// Calls during a run share one queued follow-up run, so an SMS that lands mid-scan is still picked up
+export function runIngestion(): Promise<IngestResult> {
+  if (running) {
+    queued ??= running
+      .catch(() => undefined)
+      .then(() => {
+        queued = null;
+        return runIngestion();
+      });
+    return queued;
+  }
+  running = ingest().finally(() => {
     running = null;
   });
   return running;

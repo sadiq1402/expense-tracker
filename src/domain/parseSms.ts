@@ -98,6 +98,7 @@ export function parseSms(sms: RawSms): ParseResult {
       merchant: findMerchant(body),
       channel,
       sourceSmsId: sms.id,
+      sourceSender: sms.sender,
     },
   };
 }

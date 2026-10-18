@@ -18,6 +18,7 @@ export interface ParsedTxn {
   merchant: string | null;
   channel: Channel;
   sourceSmsId: string;
+  sourceSender: string;
 }
 
 export type ParseResult =
@@ -28,6 +29,7 @@ export type ParseResult =
 export interface Transaction extends ParsedTxn {
   id: string;
   sourceSmsIds: string[];
+  sourceSenders: string[];
   categoryId: string | null;
   note: string | null;
   isSelfTransfer: boolean;

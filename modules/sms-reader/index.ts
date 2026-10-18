@@ -12,3 +12,7 @@ export async function requestPermission(): Promise<boolean> {
 export function readInbox(sinceMs: number) {
   return SmsReader.readInbox(sinceMs);
 }
+
+export function addInboxListener(listener: () => void) {
+  return SmsReader.addListener('onInboxChanged', listener);
+}
