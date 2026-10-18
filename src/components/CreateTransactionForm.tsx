@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+
+import { Button } from '@/components/Button';
 
 import type { NeedsReviewItem } from '@/db/repo';
 import { rupeesToPaise } from '@/domain/format';
@@ -53,28 +55,6 @@ export function CreateTransactionForm({
   );
 }
 
-export function Button({
-  label,
-  onPress,
-  primary,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.button, primary && styles.primary, disabled && styles.disabled]}
-    >
-      <Text style={primary ? styles.primaryText : undefined}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 8 },
   form: { gap: 8 },
@@ -84,14 +64,4 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 8,
   },
-  button: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#999',
-  },
-  primary: { backgroundColor: '#1a73e8', borderColor: '#1a73e8' },
-  primaryText: { color: '#fff' },
-  disabled: { opacity: 0.4 },
 });

@@ -7,6 +7,9 @@ const MIGRATIONS = [
   // Resolved rows are kept (not deleted) so a re-scan can't resurrect them
   `CREATE TABLE needs_review (sms_id TEXT PRIMARY KEY NOT NULL, received_at INTEGER NOT NULL, sms TEXT NOT NULL,
      reason TEXT NOT NULL, resolved INTEGER NOT NULL DEFAULT 0);`,
+  // Only custom Categories and user Merchant Rules; defaults and seeds live in code
+  `CREATE TABLE categories (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE COLLATE NOCASE);
+   CREATE TABLE merchant_rules (merchant TEXT PRIMARY KEY NOT NULL, category_id TEXT NOT NULL);`,
 ];
 
 let db: Promise<SQLite.SQLiteDatabase> | null = null;
