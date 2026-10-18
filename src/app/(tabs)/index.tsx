@@ -15,6 +15,7 @@ import {
   istDayFromPicker,
   monthKey,
   monthLabel,
+  monthName,
   monthRangeOf,
   pickerDateFromIstDay,
   rangeFor,
@@ -22,6 +23,7 @@ import {
 } from '@/domain/dateRange';
 import { formatWholeRupees } from '@/domain/format';
 import { useLedger } from '@/hooks/useLedger';
+import { openBreakdown } from '@/services/navigation';
 import { colors } from '@/theme';
 
 const TOP_CATEGORIES = 4;
@@ -33,7 +35,6 @@ const PRESETS: { value: RangePreset; label: string }[] = [
 
 const shortDate = (ms: number) =>
   new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
-const monthName = (ms: number) => new Date(ms).toLocaleDateString('en-IN', { month: 'long', timeZone: 'Asia/Kolkata' });
 
 export default function DashboardScreen() {
   const { status, txns, categories, loadedAt: now } = useLedger();
@@ -77,6 +78,9 @@ export default function DashboardScreen() {
 
   const headline = preset === 'month' ? monthName(range.start) : preset === 'week' ? 'This week' : 'Custom range';
   const highlighted = pickedMonth ?? currentMonth;
+
+  const rangeLabel =
+    preset === 'month' ? monthName(range.start) : `${shortDate(range.start)} – ${shortDate(range.end - 1)}`;
 
   const pickMonth = (key: string) => {
     setPreset('month');
@@ -132,7 +136,12 @@ export default function DashboardScreen() {
         <Card title="By Category">
           {shown.length === 0 ? <Text style={styles.empty}>No spending in this range.</Text> : undefined}
           {shown.map((s) => (
-            <CategoryRow key={s.categoryId} slice={s} max={slices[0].amountPaise} />
+            <CategoryRow
+              key={s.categoryId}
+              slice={s}
+              max={slices[0].amountPaise}
+              onPress={() => openBreakdown({ kind: 'category', key: s.categoryId }, range, rangeLabel)}
+            />
           ))}
           {rest.length > 0 ? (
             <MoreButton
@@ -157,7 +166,11 @@ export default function DashboardScreen() {
         <Card title="Top Merchants">
           {merchants.length === 0 ? <Text style={styles.empty}>No merchants in this range.</Text> : undefined}
           {merchants.map((m) => (
-            <MerchantRow key={m.merchant} {...m} />
+            <MerchantRow
+              key={m.merchant}
+              {...m}
+              onPress={() => openBreakdown({ kind: 'merchant', key: m.merchant }, range, rangeLabel)}
+            />
           ))}
         </Card>
       </ScrollView>

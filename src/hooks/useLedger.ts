@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { addInboxListener, requestPermission } from '../../modules/sms-reader';
@@ -31,8 +31,10 @@ const INITIAL: Ledger = {
 };
 
 // Re-scans and reloads on focus, on return to the foreground and whenever a new SMS lands
-export function useLedger(): Ledger {
+export function useLedger(): Ledger & { reload: () => void } {
   const [ledger, setLedger] = useState<Ledger>(INITIAL);
+  // The focused screen's refresh, so reload() can re-read after the screen's own edit
+  const refreshRef = useRef<(() => Promise<void>) | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -66,6 +68,7 @@ export function useLedger(): Ledger {
           if (!cancelled) setLedger((l) => ({ ...l, status: 'error' }));
         }
       };
+      refreshRef.current = refresh;
       refresh();
       const inbox = addInboxListener(refresh);
       const appState = AppState.addEventListener('change', (s) => s === 'active' && refresh());
@@ -77,5 +80,8 @@ export function useLedger(): Ledger {
     }, []),
   );
 
-  return ledger;
+  const reload = useCallback(() => {
+    refreshRef.current?.();
+  }, []);
+  return { ...ledger, reload };
 }

@@ -78,3 +78,22 @@ export function pickerDateFromIstDay(ms: number): Date {
   const { year, month, day } = istFields(ms);
   return new Date(year, month, day);
 }
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+export function monthName(ms: number): string {
+  return MONTH_NAMES[istFields(ms).month];
+}

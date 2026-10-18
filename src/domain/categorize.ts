@@ -46,10 +46,14 @@ export function categorize(txn: Transaction, userRules: MerchantRule[]): string 
   return (bestMatch(merchant, userRules) ?? bestMatch(merchant, SEED_RULES))?.categoryId ?? OTHER_ID;
 }
 
+export function ruleForMerchant(merchant: string, categoryId: string): MerchantRule {
+  return { merchant: merchantKey(merchant), categoryId, source: 'user' };
+}
+
 // Credits don't teach rules: relabelling a friend's repayment mustn't relabel future payments to them
 export function ruleFromCorrection(txn: Transaction, categoryId: string): MerchantRule | null {
   if (txn.direction === 'credit' || !txn.merchant) return null;
-  return { merchant: merchantKey(txn.merchant), categoryId, source: 'user' };
+  return ruleForMerchant(txn.merchant, categoryId);
 }
 
 export function newCategory(name: string, existing: Category[], newId: () => string): Category | null {
@@ -85,4 +89,9 @@ export function classifyCredit(
     )
     .reduce<Transaction | null>((latest, t) => (!latest || t.occurredAt > latest.occurredAt ? t : latest), null);
   return purchase ? { isRefund: true, categoryId: purchase.categoryId } : { isRefund: false, categoryId: null };
+}
+
+// True when a Merchant Rule covers this Merchant, using the same whole-word match as categorize
+export function ruleCovers(rule: MerchantRule, merchant: string): boolean {
+  return matches(normalize(merchant), rule.merchant);
 }

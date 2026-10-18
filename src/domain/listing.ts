@@ -12,7 +12,7 @@ export interface DayGroup {
 }
 
 // Hand-rolled from IST fields so labels don't depend on the device's Intl data
-const dateLabel = (ms: number, now: number) => {
+export const dayLabel = (ms: number, now: number) => {
   const { year, month, day, weekday } = istFields(ms);
   const sameYear = year === istFields(now).year;
   return `${WEEKDAYS[weekday]} ${day} ${MONTH_LABELS[month]}${sameYear ? '' : ` ${year}`}`;
@@ -31,7 +31,7 @@ export function groupByDay(txns: Transaction[], now: number): DayGroup[] {
     let group = groups.get(key);
     if (!group) {
       const label =
-        key === today ? 'Today' : key === today - DAY_MS ? `Yesterday · ${dateLabel(key, now)}` : dateLabel(key, now);
+        key === today ? 'Today' : key === today - DAY_MS ? `Yesterday · ${dayLabel(key, now)}` : dayLabel(key, now);
       group = { key, label, spendPaise: 0, txns: [] };
       groups.set(key, group);
     }
@@ -78,5 +78,5 @@ const CHANNEL_LABELS: Record<Channel, string | null> = {
 
 export function detailMeta(t: Transaction, account: string | null, now: number): string {
   const channel = t.isCash ? 'Cash' : CHANNEL_LABELS[t.channel];
-  return [dateLabel(t.occurredAt, now), timeLabel(t.occurredAt), channel, account].filter(Boolean).join(' · ');
+  return [dayLabel(t.occurredAt, now), timeLabel(t.occurredAt), channel, account].filter(Boolean).join(' · ');
 }
