@@ -40,11 +40,14 @@ async function ingest() {
   const inbox = await readInbox(scanSince(last === null ? null : Number(last), Date.now()));
 
   const parsed: ParsedTxn[] = [];
+  const parsedSms: RawSms[] = [];
   const review: NeedsReviewItem[] = [];
   for (const sms of inbox) {
     const r = parseSms(sms);
-    if (r.kind === 'transaction') parsed.push(r.txn);
-    else if (r.kind === 'needs_review') review.push({ sms: r.sms, reason: r.reason });
+    if (r.kind === 'transaction') {
+      parsed.push(r.txn);
+      parsedSms.push(sms);
+    } else if (r.kind === 'needs_review') review.push({ sms: r.sms, reason: r.reason });
   }
 
   const existing = await repo.allTransactions();
@@ -58,6 +61,7 @@ async function ingest() {
   const classified = withRefunds([...categorized, ...credits], existing);
   const toSave = classified.filter((t, i) => i < categorized.length || t.isRefund);
   await repo.upsertTransactions(await withAccountsAndSelfTransfers(existing, toSave));
+  await repo.saveSms(parsedSms);
   await repo.addNeedsReview(review);
   if (inbox.length > 0) {
     await repo.setMeta('lastSmsAt', String(nextCheckpoint(inbox.map((s) => s.receivedAt), Date.now())));
@@ -79,6 +83,7 @@ export async function createFromReview(sms: RawSms, input: Pick<ParsedTxn, 'amou
   const { created } = mergeIntoExisting([], [txn], randomUUID);
   const categorized = withCategory(created, await repo.userRules());
   await repo.upsertTransactions(withRefunds(categorized, await repo.allTransactions()));
+  await repo.saveSms([sms]);
   await repo.resolveNeedsReview(sms.id);
 }
 

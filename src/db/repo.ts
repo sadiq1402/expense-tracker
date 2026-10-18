@@ -115,6 +115,29 @@ export const repo = {
     });
   },
 
+  async saveSms(messages: RawSms[]) {
+    if (messages.length === 0) return;
+    const db = await getDb();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      for (const sms of messages) {
+        await txn.runAsync('INSERT OR IGNORE INTO sms_bodies (sms_id, sms) VALUES (?, ?)', [
+          sms.id,
+          JSON.stringify(sms),
+        ]);
+      }
+    });
+  },
+
+  async smsFor(ids: string[]): Promise<RawSms[]> {
+    if (ids.length === 0) return [];
+    const db = await getDb();
+    const rows = await db.getAllAsync<{ sms: string }>(
+      `SELECT sms FROM sms_bodies WHERE sms_id IN (${ids.map(() => '?').join(', ')})`,
+      ids,
+    );
+    return rows.map((r) => JSON.parse(r.sms) as RawSms).sort((a, b) => a.receivedAt - b.receivedAt);
+  },
+
   async getMeta(key: MetaKey): Promise<string | null> {
     const db = await getDb();
     const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM meta WHERE key = ?', [key]);

@@ -1,4 +1,4 @@
-import { formatRupees, formatSignedRupees, rupeesToPaise } from '@/domain/format';
+import { accountLabel, formatRupees, formatSignedRupees, rupeesToPaise } from '@/domain/format';
 
 test('formats paise as Indian-grouped rupees', () => {
   expect(formatRupees(12345650)).toBe('₹1,23,456.50');
@@ -18,4 +18,11 @@ test('reads user-typed rupee amounts as paise', () => {
 test('signed rupees use a true minus sign for negative net spend', () => {
   expect(formatSignedRupees(-12345650)).toBe('−₹1,23,456.50');
   expect(formatSignedRupees(25000)).toBe('₹250');
+});
+
+test('labels an Account by its name, else its mask', () => {
+  const names = new Map([['1234', 'Salary']]);
+  expect(accountLabel('1234', names)).toBe('Salary');
+  expect(accountLabel('5678', names)).toBe('··5678');
+  expect(accountLabel(null, names)).toBeNull();
 });

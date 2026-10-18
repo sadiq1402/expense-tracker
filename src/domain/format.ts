@@ -25,3 +25,8 @@ export function rupeesToPaise(amount: string): number | null {
 export function merchantLabel(t: Pick<Transaction, 'merchant' | 'isCash'>): string {
   return t.merchant ?? (t.isCash ? 'Cash' : 'Unknown');
 }
+
+// The user's name for the Account when they've given one, else its masked number
+export function accountLabel(mask: string | null, names: Map<string, string>): string | null {
+  return mask ? (names.get(mask) ?? `··${mask}`) : null;
+}

@@ -1,4 +1,4 @@
-import { describeRow, groupByDay, reviewSummary } from '@/domain/listing';
+import { describeRow, detailMeta, groupByDay, reviewSummary } from '@/domain/listing';
 
 import { txn } from './fixtures/txn';
 
@@ -86,5 +86,24 @@ describe('reviewSummary', () => {
 
   test('falls back to a generic prompt for mixed reasons', () => {
     expect(reviewSummary(['amount not found', 'something else'])).toBe('Tap to check them');
+  });
+});
+
+describe('detailMeta', () => {
+  const at = ist('2026-10-18T13:12:00');
+
+  test('joins date, time, channel and Account', () => {
+    expect(detailMeta(txn({ occurredAt: at, channel: 'upi' }), 'HDFC ··1234', NOW)).toBe(
+      'Sun 18 Oct · 1:12 pm · UPI · HDFC ··1234',
+    );
+  });
+
+  test('names each channel and skips what is missing', () => {
+    expect(detailMeta(txn({ occurredAt: at, channel: 'neft_imps' }), null, NOW)).toBe(
+      'Sun 18 Oct · 1:12 pm · NEFT/IMPS',
+    );
+    expect(detailMeta(txn({ occurredAt: at, channel: 'other', isCash: true }), null, NOW)).toBe(
+      'Sun 18 Oct · 1:12 pm · Cash',
+    );
   });
 });

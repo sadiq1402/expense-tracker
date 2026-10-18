@@ -12,6 +12,8 @@ const MIGRATIONS = [
    CREATE TABLE merchant_rules (merchant TEXT PRIMARY KEY NOT NULL, category_id TEXT NOT NULL);`,
   `CREATE TABLE accounts (id TEXT PRIMARY KEY NOT NULL, mask TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
      confirmed INTEGER NOT NULL DEFAULT 0);`,
+  // The SMS a Transaction came from, for its Original SMS section; earlier scans didn't keep them
+  `CREATE TABLE sms_bodies (sms_id TEXT PRIMARY KEY NOT NULL, sms TEXT NOT NULL);`,
 ];
 
 let db: Promise<SQLite.SQLiteDatabase> | null = null;
