@@ -3,6 +3,8 @@ import {
   breakdownTxns,
   merchantCategoryOf,
   merchantPayments,
+  merchantTotals,
+  NO_MERCHANT,
   recategorizeMerchant,
 } from '@/domain/breakdown';
 import { rangeFor } from '@/domain/dateRange';
@@ -119,5 +121,26 @@ test('a Category whose Refunds outweigh its spend reads as zero, not negative', 
     payments: 0,
     averagePaise: 0,
     sharePct: 0,
+  });
+});
+
+describe('merchantTotals', () => {
+  test('includes a "No Merchant" line, always last, so the list adds up to the Category total', () => {
+    const shown = [
+      txn({ merchant: 'SWIGGY', amountPaise: 30000 }),
+      txn({ merchant: null, amountPaise: 25000 }),
+      txn({ merchant: null, amountPaise: 5000, isCash: true }),
+    ];
+    const rows = merchantTotals(shown);
+    expect(rows).toEqual([
+      { merchant: 'SWIGGY', amountPaise: 30000, count: 1 },
+      { merchant: NO_MERCHANT, amountPaise: 30000, count: 2 },
+    ]);
+    expect(rows.reduce((s, r) => s + r.amountPaise, 0)).toBe(breakdownSummary(shown, 0).spendPaise);
+  });
+
+  test('the No Merchant view lists exactly those payments', () => {
+    const txns = [txn({ merchant: null, occurredAt: oct(3) }), txn({ merchant: 'SWIGGY', occurredAt: oct(3) })];
+    expect(breakdownTxns(txns, { kind: 'merchant', key: NO_MERCHANT }, OCTOBER)).toHaveLength(1);
   });
 });

@@ -5,6 +5,8 @@ import {
   markSelfTransfers,
   selfTransferPartner,
   visibleTxns,
+  isCardBillPayment,
+  markCardBillPayments,
 } from '@/domain/accounts';
 
 import { txn } from './fixtures/txn';
@@ -187,5 +189,28 @@ describe('accountChips', () => {
       { mask: '1421', label: 'Salary', count: 2 },
       { mask: '9762', label: 'Yes Bank ··9762', count: 1 },
     ]);
+  });
+});
+
+describe('card bill payments', () => {
+  test('payments to card-bill apps are recognised; ordinary CRED or shops are not', () => {
+    expect(isCardBillPayment(txn({ merchant: 'GOKIWI TECH PRIVATE LIMIT' }))).toBe(true);
+    expect(isCardBillPayment(txn({ merchant: 'KIWI' }))).toBe(true);
+    expect(isCardBillPayment(txn({ merchant: 'CRED CCBP' }))).toBe(true);
+    expect(isCardBillPayment(txn({ merchant: 'CHEQ CREDIT CAR' }))).toBe(true);
+    expect(isCardBillPayment(txn({ merchant: 'CRED CLUB' }))).toBe(false);
+    expect(isCardBillPayment(txn({ merchant: 'KIWI FRUIT SHOP' }))).toBe(false);
+    expect(isCardBillPayment(txn({ merchant: 'SWIGGY' }))).toBe(false);
+    expect(isCardBillPayment(txn({ merchant: 'GOKIWI TECH PRIVATE LIMIT', direction: 'credit' }))).toBe(false);
+  });
+
+  test('are marked Self-Transfer so they leave every total, unless the user decided otherwise', () => {
+    const txns = [
+      txn({ id: 'k', merchant: 'GOKIWI TECH PRIVATE LIMIT' }),
+      txn({ id: 'm', merchant: 'KIWI', selfTransferManual: true, isSelfTransfer: false }),
+      txn({ id: 'done', merchant: 'CRED CCBP', isSelfTransfer: true }),
+      txn({ id: 's', merchant: 'SWIGGY' }),
+    ];
+    expect(markCardBillPayments(txns).map((t) => [t.id, t.isSelfTransfer])).toEqual([['k', true]]);
   });
 });

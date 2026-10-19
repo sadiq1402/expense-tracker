@@ -3,6 +3,9 @@ import type { MerchantRule } from '@/domain/types';
 const SEEDS: Record<string, string[]> = {
   food: [
     'SWIGGY',
+    // Card SMS run the brand and product together
+    'SWIGGYFOOD',
+    'ZOMATOFOOD',
     'ZOMATO',
     'UBEREATS',
     'UBER EATS',
@@ -20,6 +23,7 @@ const SEEDS: Record<string, string[]> = {
     'BLINKIT',
     'ZEPTO',
     'INSTAMART',
+    'SWIGGYINSTAMART',
     'DMART',
     'JIOMART',
     'MORE RETAIL',

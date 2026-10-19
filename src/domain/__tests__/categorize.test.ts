@@ -53,6 +53,11 @@ describe('categorize', () => {
     expect(categorize(txn('JIOMART'), [])).toBe('groceries');
   });
 
+  test('card SMS spellings that join brand and product', () => {
+    expect(categorize(txn('SWIGGYFOOD'), [])).toBe('food');
+    expect(categorize(txn('SWIGGYINSTAMART'), [])).toBe('groceries');
+  });
+
   test('the longest matching seed wins', () => {
     expect(categorize(txn('AMAZON PRIME VIDEO'), [])).toBe('entertainment');
     expect(categorize(txn('AMAZON PAY'), [])).toBe('shopping');

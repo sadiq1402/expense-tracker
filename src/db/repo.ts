@@ -7,7 +7,7 @@ export interface NeedsReviewItem {
   reason: string;
 }
 
-type MetaKey = 'lastSmsAt';
+type MetaKey = 'lastSmsAt' | 'parserVersion';
 
 // Rows written before sender tracking lack sourceSenders
 const toTransaction = (data: string): Transaction => ({ sourceSenders: [], ...JSON.parse(data) });
