@@ -99,3 +99,17 @@ export function accountChips(accounts: Account[], txns: Transaction[]): AccountC
     })
     .sort((x, y) => y.count - x.count);
 }
+
+// Apps that pay credit-card bills from a bank account; the card purchases themselves are already counted, so paying
+// the bill is money moving between the user's own Accounts. Plain "CRED" is left out: it also pays rent and shops.
+const CARD_BILL_PAYEE = /\b(?:GOKIWI|CCBP|CHEQ)\b|^KIWI$|CREDIT CARD BILL/;
+
+export function isCardBillPayment(t: Transaction): boolean {
+  return t.direction === 'debit' && !!t.merchant && CARD_BILL_PAYEE.test(t.merchant.toUpperCase());
+}
+
+export function markCardBillPayments(txns: Transaction[]): Transaction[] {
+  return txns
+    .filter((t) => !t.selfTransferManual && !t.isSelfTransfer && isCardBillPayment(t))
+    .map((t) => ({ ...t, isSelfTransfer: true }));
+}

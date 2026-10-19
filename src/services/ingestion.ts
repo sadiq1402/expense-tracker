@@ -2,10 +2,11 @@ import { randomUUID } from 'expo-crypto';
 
 import { readInbox } from '../../modules/sms-reader';
 import { repo, type NeedsReviewItem } from '@/db/repo';
-import { discoverAccounts, markSelfTransfers } from '@/domain/accounts';
+import { discoverAccounts, markCardBillPayments, markSelfTransfers } from '@/domain/accounts';
 import { categorize, classifyCredit } from '@/domain/categorize';
 import { mergeIntoExisting } from '@/domain/ingest';
 import { parseSms } from '@/domain/parseSms';
+import { refreshMerchants } from '@/domain/reparse';
 import { nextCheckpoint, scanSince } from '@/domain/scanWindow';
 import type { MerchantRule, ParsedTxn, RawSms, Transaction } from '@/domain/types';
 
@@ -31,11 +32,30 @@ async function withAccountsAndSelfTransfers(existing: Transaction[], toSave: Tra
   const all = [...new Map([...existing, ...toSave].map((t) => [t.id, t])).values()];
   await repo.upsertAccounts(discoverAccounts(all, await repo.accounts(), randomUUID));
   const merged = new Map(toSave.map((t) => [t.id, t]));
-  for (const t of markSelfTransfers(all)) merged.set(t.id, t);
+  for (const t of [...markSelfTransfers(all), ...markCardBillPayments(all)]) merged.set(t.id, t);
   return [...merged.values()];
 }
 
+// Bump when the parser learns new SMS formats, so stored Transactions are re-read once and gain their Merchants
+const PARSER_VERSION = 2;
+
+async function reparseIfParserChanged() {
+  if (Number((await repo.getMeta('parserVersion')) ?? 1) >= PARSER_VERSION) return;
+  const stored = await repo.allTransactions();
+  // A fresh install has nothing to refresh; its first scan already uses the current parser
+  if (stored.length > 0) {
+    const inbox = await readInbox(scanSince(null, Date.now()));
+    const fresh = inbox.flatMap((sms) => {
+      const r = parseSms(sms);
+      return r.kind === 'transaction' ? [r.txn] : [];
+    });
+    await repo.upsertTransactions(refreshMerchants(stored, fresh, await repo.userRules()));
+  }
+  await repo.setMeta('parserVersion', String(PARSER_VERSION));
+}
+
 async function ingest() {
+  await reparseIfParserChanged();
   const last = await repo.getMeta('lastSmsAt');
   const inbox = await readInbox(scanSince(last === null ? null : Number(last), Date.now()));
 
@@ -64,7 +84,15 @@ async function ingest() {
   await repo.saveSms(parsedSms);
   await repo.addNeedsReview(review);
   if (inbox.length > 0) {
-    await repo.setMeta('lastSmsAt', String(nextCheckpoint(inbox.map((s) => s.receivedAt), Date.now())));
+    await repo.setMeta(
+      'lastSmsAt',
+      String(
+        nextCheckpoint(
+          inbox.map((s) => s.receivedAt),
+          Date.now(),
+        ),
+      ),
+    );
   }
   return { added: created.length, review: review.length };
 }

@@ -28,28 +28,43 @@ const ACCOUNT_MASK = /(?:a\/c|acct|\bac|account|card)\.?(?:\s*no\.?)?\s*(?:[x*.]
 const UPI_REF = /(?:ref(?:\s*no)?|upi|transaction id|rrn)[\s:/#.-]*(?:p2[ma]\/)?(\d{12})\b/i;
 
 const STOP = String.raw`(?=\s+(?:on|ref|refno|upi|via|from|to|at|by|thru|in|is|dt)\b|\.(?:\s|$)|[,;(\n]|$)`;
-// Ordered most-specific first; a capture naming the user's own account or bank is skipped, but a VPA never is
-const MERCHANT = [
-  /\nTo\s+([^\n]+)/,
-  /trf to\s+(.+?)\s+Ref/i,
-  /;\s*(.+?)\s+credited/i,
-  /(?:UPI|IMPS)\/P2[MA]\/\d+\/([^\n]+)/i,
-  new RegExp(String.raw`\bfor\s+([A-Z][A-Z0-9 &*.'-]+?)` + STOP),
-  new RegExp(String.raw`\b(?:to|at|by|from)\s+(?:vpa\s+)?([A-Za-z0-9@][A-Za-z0-9@ &*.'_-]*?)` + STOP, 'gi'),
+// Ordered most-specific first. A structured slot (HDFC's "To" line, a card's payee tag) is trusted as the payee even
+// when it names a bank or wallet; loose "to/at/by …" matches skip anything that looks like the user's own account
+const MERCHANT: { re: RegExp; trusted: boolean; unless?: RegExp }[] = [
+  // The user's own account or a fraud-help instruction can sit on that line too
+  { re: /\nTo\s+([^\n]+)/, trusted: true, unless: /a\/c|\bblock\b|\breport\b/i },
+  { re: /trf to\s+(.+?)\s+Ref/i, trusted: true },
+  { re: /;\s*(.+?)\s+credited/i, trusted: true },
+  { re: /(?:UPI|IMPS)\/P2[MA]\/\d+\/([^\n]+)/i, trusted: true },
+  // Card SMS that tag the payee: Yes Bank "@UPI_NAME 12-10-2026" or "@SWIGGYFOOD 12-10-2026", ICICI "for UPI-<ref>-Name."
+  { re: /(?:^|\s)@(?:UPI_)?(.+?)\s+\d{2}-\d{2}-\d{4}/i, trusted: true },
+  { re: /\bUPI-\d+-([^.\n]+)/i, trusted: true },
+  // Card-bill apps confirming a payment: "Your YES Bank Credit Card ... bill of Rs. 4250 ... paid via Kiwi."
+  { re: /credit card\b.*?\bbill\b.*?\bpaid via\s+([A-Za-z]+)/i, trusted: true },
+  // ICICI card "on 12-Jul-26 on APPLE INDIA PRI." and HDFC card "At ..RELIANCE TRENDS_ On"
+  { re: /\bon\s+\d{1,2}-[A-Za-z]{3}-\d{2,4}\s+on\s+([^.\n]+)\./i, trusted: true },
+  { re: /\bAt\s+\.\.(.+?)_?\s+On\b/i, trusted: true },
+  { re: new RegExp(String.raw`\bfor\s+([A-Z][A-Z0-9 &*.'-]+?)` + STOP), trusted: false },
+  {
+    re: new RegExp(String.raw`\b(?:to|at|by|from)\s+(?:vpa\s+)?([A-Za-z0-9@][A-Za-z0-9@ &*.'_-]*?)` + STOP, 'gi'),
+    trusted: false,
+  },
 ];
 const NOT_MERCHANT = /a\/c|\bac\b|acct|account|card|bank|\byour\b|\batm\b|\bmobile\b|neft|imps|upi|^\d|^(?:rs|inr)\b/i;
+const NEVER_MERCHANT = /https?:|www\.|^\d+$/i;
 
 // Fraud/helpline footers mention "to"/"at" too, so merchant search stops before them
-const FOOTER = /\b(?:not (?:u|you)|if not|call\b|sms block|fwd this)/i;
+const FOOTER = /\b(?:not (?:u|you)|if not|call\b|sms block|fwd this|to dispute)/i;
 
 const findMerchant = (sms: string) => {
   const cut = sms.search(FOOTER);
   const body = cut < 0 ? sms : sms.slice(0, cut);
-  for (const p of MERCHANT) {
-    const matches = p.global ? [...body.matchAll(p)] : [body.match(p)];
+  for (const { re, trusted, unless } of MERCHANT) {
+    const matches = re.global ? [...body.matchAll(re)] : [body.match(re)];
     for (const m of matches) {
       const name = m?.[1].trim();
-      if (name && (/^\S+@\S+$/.test(name) || !NOT_MERCHANT.test(name))) return name.toUpperCase();
+      if (!name || NEVER_MERCHANT.test(name) || unless?.test(name)) continue;
+      if (trusted || /^\S+@\S+$/.test(name) || !NOT_MERCHANT.test(name)) return name.toUpperCase();
     }
   }
   return null;

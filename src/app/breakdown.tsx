@@ -7,13 +7,15 @@ import { Card } from '@/components/Card';
 import { MerchantRow, TrendChart } from '@/components/DashboardWidgets';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
-import { monthlyTrend, spendOf, topMerchants, totalSpend, trendAverage } from '@/domain/aggregate';
+import { monthlyTrend, spendOf, totalSpend, trendAverage } from '@/domain/aggregate';
 import { filterByAccount } from '@/domain/accounts';
 import {
   breakdownSummary,
   breakdownTxns,
   matchesFilter,
   merchantCategoryOf,
+  merchantTotals,
+  NO_MERCHANT,
   type BreakdownFilter,
 } from '@/domain/breakdown';
 import { monthKey, monthLabel, monthName, monthRangeOf, type DateRange } from '@/domain/dateRange';
@@ -121,7 +123,7 @@ export default function BreakdownScreen() {
         </View>
       </View>
 
-      {isMerchant ? (
+      {isMerchant && key !== NO_MERCHANT ? (
         <Card title="Category for all payments">
           <View style={styles.chips}>
             {categories.map((c) => (
@@ -191,7 +193,7 @@ export default function BreakdownScreen() {
         </View>
       ) : (
         <Card title={`Merchants · ${label}`}>
-          {topMerchants(shown, range, 50).map((m) => (
+          {merchantTotals(shown).map((m) => (
             <MerchantRow
               key={m.merchant}
               {...m}
