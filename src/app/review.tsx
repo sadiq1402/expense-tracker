@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/Text';
 import { Button } from '@/components/Button';
@@ -38,38 +39,42 @@ export default function ReviewScreen() {
   if (!items) return <ActivityIndicator style={styles.center} />;
 
   return (
-    <FlatList
-      data={items}
-      keyExtractor={(i) => i.sms.id}
-      ListEmptyComponent={<Text style={styles.empty}>Nothing needs review.</Text>}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.meta}>
-            {item.sms.sender} · {new Date(item.sms.receivedAt).toLocaleString('en-IN')}
-          </Text>
-          <Text style={styles.body}>{item.sms.body}</Text>
-          {editing === item.sms.id ? (
-            <CreateTransactionForm
-              item={item}
-              onCancel={() => setEditing(null)}
-              onDone={async () => {
-                setEditing(null);
-                await load();
-              }}
-            />
-          ) : (
-            <View style={styles.actions}>
-              <Button label="Create transaction" onPress={() => setEditing(item.sms.id)} primary />
-              <Button label="Dismiss" onPress={() => dismiss(item.sms.id)} />
-            </View>
-          )}
-        </View>
-      )}
-    />
+    // Stack screens draw under the system navigation bar, so the last item needs its inset
+    <SafeAreaView edges={['bottom']} style={styles.screen}>
+      <FlatList
+        data={items}
+        keyExtractor={(i) => i.sms.id}
+        ListEmptyComponent={<Text style={styles.empty}>Nothing needs review.</Text>}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.meta}>
+              {item.sms.sender} · {new Date(item.sms.receivedAt).toLocaleString('en-IN')}
+            </Text>
+            <Text style={styles.body}>{item.sms.body}</Text>
+            {editing === item.sms.id ? (
+              <CreateTransactionForm
+                item={item}
+                onCancel={() => setEditing(null)}
+                onDone={async () => {
+                  setEditing(null);
+                  await load();
+                }}
+              />
+            ) : (
+              <View style={styles.actions}>
+                <Button label="Create transaction" onPress={() => setEditing(item.sms.id)} primary />
+                <Button label="Dismiss" onPress={() => dismiss(item.sms.id)} />
+              </View>
+            )}
+          </View>
+        )}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   center: {
     flex: 1,
     alignItems: 'center',
