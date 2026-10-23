@@ -10,7 +10,7 @@ import { Icon } from '@/components/Icon';
 import { Text, TextInput } from '@/components/Text';
 import { Avatar } from '@/components/TransactionRow';
 import { repo } from '@/db/repo';
-import { newCategory } from '@/domain/categorize';
+import { mixedKeyFor, newCategory } from '@/domain/categorize';
 import { accountLabel, formatRupees, merchantLabel } from '@/domain/format';
 import { detailMeta } from '@/domain/listing';
 import type { Account, Category, RawSms, Transaction } from '@/domain/types';
@@ -30,6 +30,7 @@ export default function TransactionScreen() {
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [mixed, setMixed] = useState<string[]>([]);
   const [smsMessages, setSmsMessages] = useState<RawSms[]>([]);
   const [showSms, setShowSms] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -43,13 +44,19 @@ export default function TransactionScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [t, c, a] = await Promise.all([repo.getTransaction(id), repo.categories(), repo.accounts()]);
+      const [t, c, a, m] = await Promise.all([
+        repo.getTransaction(id),
+        repo.categories(),
+        repo.accounts(),
+        repo.mixedMerchants(),
+      ]);
       const sms = t && !t.isCash ? await repo.smsFor(t.sourceSmsIds) : [];
       if (cancelled) return;
       latest.current = t;
       setTxn(t);
       setCategories(c);
       setAccounts(a);
+      setMixed(m);
       setSmsMessages(sms);
     })().catch((e) => console.error('Loading transaction failed', e));
     return () => {
@@ -80,8 +87,10 @@ export default function TransactionScreen() {
   const choose = async (categoryId: string) => {
     if (!latest.current) return;
     await setCategory(latest.current, categoryId);
-    latest.current = { ...latest.current, categoryId };
+    latest.current = { ...latest.current, categoryId, unchecked: false };
     setTxn(latest.current);
+    // This choice may have just made the Merchant Mixed
+    setMixed(await repo.mixedMerchants());
   };
 
   const add = async () => {
@@ -143,7 +152,11 @@ export default function TransactionScreen() {
         ) : undefined}
         {error ? <Text style={styles.error}>{error}</Text> : undefined}
         {txn.merchant && txn.direction === 'debit' ? (
-          <Text style={styles.hint}>Future payments to {merchantLabel(txn)} will use this Category.</Text>
+          <Text style={styles.hint}>
+            {mixedKeyFor(txn.merchant, mixed)
+              ? `You've used more than one Category for ${merchantLabel(txn)}, so you'll be asked each time.`
+              : `Future payments to ${merchantLabel(txn)} will use this Category.`}
+          </Text>
         ) : undefined}
       </Card>
 

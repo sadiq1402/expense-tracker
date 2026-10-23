@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 
 import { TabIcon } from '@/components/TabIcon';
+import { useCategoryCheckPrompt } from '@/hooks/useCategoryCheckPrompt';
 import { colors, fontFamily } from '@/theme';
 
 export default function TabsLayout() {
+  useCategoryCheckPrompt();
   return (
     <Tabs
       screenOptions={{

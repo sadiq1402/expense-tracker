@@ -4,6 +4,7 @@ import { readInbox } from '../../modules/sms-reader';
 import { repo, type NeedsReviewItem } from '@/db/repo';
 import { discoverAccounts, markCardBillPayments, markSelfTransfers } from '@/domain/accounts';
 import { categorize, classifyCredit } from '@/domain/categorize';
+import { flagUnchecked } from '@/domain/categoryCheck';
 import { mergeIntoExisting } from '@/domain/ingest';
 import { parseSms } from '@/domain/parseSms';
 import { refreshMerchants } from '@/domain/reparse';
@@ -14,6 +15,15 @@ type IngestResult = { added: number; review: number };
 
 let running: Promise<IngestResult> | null = null;
 let queued: Promise<IngestResult> | null = null;
+const finished = new Set<() => void>();
+
+// Lets the Category Check open once the scan that runs on launch or return to the app has landed
+export function onIngested(listener: () => void) {
+  finished.add(listener);
+  return () => {
+    finished.delete(listener);
+  };
+}
 
 // Never overwrites a Category the user (or an earlier run) already set
 const withCategory = (txns: Transaction[], rules: MerchantRule[]) =>
@@ -75,7 +85,11 @@ async function ingest() {
   const touched = new Set(updated.map((t) => t.id));
   // Also picks up debits stored before categorization existed
   const backlog = existing.filter((t) => !t.categoryId && t.direction === 'debit' && !touched.has(t.id));
-  const categorized = withCategory([...created, ...updated, ...backlog], await repo.userRules());
+  const [rules, mixed] = await Promise.all([repo.userRules(), repo.mixedMerchants()]);
+  // Only brand-new SMS Expenses go to the Category Check; the first scan's months of backfill aren't asked about
+  const fresh = withCategory(created, rules);
+  const flagged = last === null ? fresh : flagUnchecked(fresh, existing, rules, mixed);
+  const categorized = [...flagged, ...withCategory([...updated, ...backlog], rules)];
   // Stored credits are re-checked too, so refunds ingested before Refund detection are picked up
   const credits = existing.filter((t) => isUnclassifiedCredit(t) && !touched.has(t.id));
   const classified = withRefunds([...categorized, ...credits], existing);
@@ -126,8 +140,13 @@ export function runIngestion(): Promise<IngestResult> {
       });
     return queued;
   }
-  running = ingest().finally(() => {
-    running = null;
-  });
+  running = ingest()
+    .then((result) => {
+      finished.forEach((listener) => listener());
+      return result;
+    })
+    .finally(() => {
+      running = null;
+    });
   return running;
 }

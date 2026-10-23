@@ -20,6 +20,12 @@
 
 **Merchant Rule**: A remembered mapping from a Merchant to a Category, created when the user corrects a Transaction's Category.
 
+**Mixed Merchant**: A Merchant the user has put in more than one Category, so it has no Merchant Rule and each of its new Expenses goes to the Category Check.
+
+**Category Check**: The sheet that opens when the app is opened or returned to, listing new Unchecked Expenses so the user can confirm or change their Categories in one go.
+
+**Unchecked**: The state of a new SMS Expense whose Category the user hasn't confirmed yet.
+
 **Needs Review**: The state of a message the app could not confidently turn into a Transaction; the user resolves it manually.
 
 **UPI Reference**: The unique reference number of a UPI payment, used to recognise that two messages describe the same Transaction.
