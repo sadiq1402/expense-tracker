@@ -22,6 +22,16 @@ export default function RootLayout() {
         <Stack.Screen name="transaction/[id]" options={{ title: '' }} />
         <Stack.Screen name="breakdown" options={{ title: '' }} />
         <Stack.Screen
+          name="category-check"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetAllowedDetents: [0.8],
+            sheetCornerRadius: 24,
+            contentStyle: { backgroundColor: colors.surface },
+          }}
+        />
+        <Stack.Screen
           name="add-cash"
           options={{
             title: 'Add cash',

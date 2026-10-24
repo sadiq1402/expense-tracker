@@ -1,15 +1,25 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabIcon } from '@/components/TabIcon';
+import { useCategoryCheckPrompt } from '@/hooks/useCategoryCheckPrompt';
 import { colors, fontFamily } from '@/theme';
 
 export default function TabsLayout() {
+  useCategoryCheckPrompt();
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.subtle,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, height: 80, paddingTop: 8 },
+        // The pill icon and label need 64px; the system navigation bar's inset goes below that, whatever its size
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.line,
+          height: 64 + bottom,
+          paddingTop: 8,
+        },
         tabBarItemStyle: { gap: 4 },
         tabBarLabelStyle: { fontFamily, fontSize: 12, fontWeight: '700' },
         headerStyle: { backgroundColor: colors.bg },

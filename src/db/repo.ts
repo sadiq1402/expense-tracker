@@ -92,6 +92,34 @@ export const repo = {
     ]);
   },
 
+  async deleteRules(merchants: string[]) {
+    if (merchants.length === 0) return;
+    const db = await getDb();
+    await db.runAsync(
+      `DELETE FROM merchant_rules WHERE merchant IN (${merchants.map(() => '?').join(', ')})`,
+      merchants,
+    );
+  },
+
+  async mixedMerchants(): Promise<string[]> {
+    const db = await getDb();
+    const rows = await db.getAllAsync<{ merchant: string }>('SELECT merchant FROM mixed_merchants');
+    return rows.map((r) => r.merchant);
+  },
+
+  async addMixedMerchants(merchants: string[]) {
+    if (merchants.length === 0) return;
+    const db = await getDb();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      for (const m of merchants) await txn.runAsync('INSERT OR IGNORE INTO mixed_merchants (merchant) VALUES (?)', [m]);
+    });
+  },
+
+  async removeMixedMerchant(merchant: string) {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM mixed_merchants WHERE merchant = ?', [merchant]);
+  },
+
   async accounts(): Promise<Account[]> {
     const db = await getDb();
     const rows = await db.getAllAsync<{ id: string; mask: string; name: string; confirmed: number; hidden: number }>(

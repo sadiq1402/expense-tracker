@@ -29,8 +29,17 @@ const matches = (merchant: string, rule: string) => {
   return false;
 };
 
-// "SWIGGY*BANGALORE" → "SWIGGY", "RAMESH.K@OKAXIS" → "RAMESH.K", so one correction covers every SMS variant
-const merchantKey = (merchant: string) => normalize(merchant).split(/[*@]/)[0].trim() || normalize(merchant);
+// Gateways and generic words appear across unrelated Merchants, so they never link a credit to a purchase
+const GENERIC_STEMS = new Set(['PAY', 'UPI', 'RAZORPAY', 'PAYU', 'PAYTM', 'CCAVENUE', 'BILLDESK', 'PHONEPE', 'GPAY']);
+
+// "SWIGGY*BANGALORE" → "SWIGGY", "RAMESH.K@OKAXIS" → "RAMESH.K", so one correction covers every SMS variant;
+// a gateway prefix is skipped, so "PAYTM*KRISHNA STORES" → "KRISHNA STORES" rather than every Paytm payment
+const merchantKey = (merchant: string) => {
+  const [stem, rest] = normalize(merchant)
+    .split(/[*@]/)
+    .map((part) => part.trim());
+  return (GENERIC_STEMS.has(stem) && rest ? rest : stem) || normalize(merchant);
+};
 
 // Longest match wins, so "AMAZON PRIME" beats "AMAZON"
 const bestMatch = (merchant: string, rules: MerchantRule[]) =>
@@ -62,9 +71,6 @@ export function newCategory(name: string, existing: Category[], newId: () => str
   return { id: newId(), name: trimmed, builtIn: false };
 }
 
-// Gateways and generic words appear across unrelated Merchants, so they never link a credit to a purchase
-const GENERIC_STEMS = new Set(['PAY', 'UPI', 'RAZORPAY', 'PAYU', 'PAYTM', 'CCAVENUE', 'BILLDESK', 'PHONEPE', 'GPAY']);
-
 // Either stem containing the other as whole words, so "AMAZON" refunds an "AMAZON PAY" purchase
 const sameMerchant = (a: string, b: string) => {
   const [ka, kb] = [merchantKey(a), merchantKey(b)];
@@ -94,4 +100,9 @@ export function classifyCredit(
 // True when a Merchant Rule covers this Merchant, using the same whole-word match as categorize
 export function ruleCovers(rule: MerchantRule, merchant: string): boolean {
   return matches(normalize(merchant), rule.merchant);
+}
+
+// A Mixed Merchant is matched like a Merchant Rule, so every SMS variant of it is covered
+export function mixedKeyFor(merchant: string, mixed: string[]): string | undefined {
+  return mixed.find((key) => matches(normalize(merchant), key));
 }

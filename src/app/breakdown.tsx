@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -83,130 +84,133 @@ export default function BreakdownScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: visual.tint }]}>
-          {isMerchant ? (
-            <Text style={[styles.initial, { color: visual.color }]}>{title.charAt(0)}</Text>
-          ) : (
-            <Icon name={visual.icon} size={26} color={visual.color} />
-          )}
-        </View>
-        <View style={styles.flex}>
-          <Text style={styles.title} accessibilityRole="header">
-            {title}
-          </Text>
-          <Text style={styles.sub}>
-            {isMerchant ? `Merchant · ${names.get(merchantCategory) ?? 'Other'}` : 'Category'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.hero}>
-        <Text style={styles.heroCaption}>
-          Spent {isMerchant ? 'here' : 'on this'} · {label}
-        </Text>
-        <Text style={styles.heroTotal}>{formatWholeRupees(summary.spendPaise)}</Text>
-        <View style={styles.stats}>
-          <Text style={styles.stat}>
-            <Text style={styles.statLabel}>Payments </Text>
-            {summary.payments}
-          </Text>
-          <Text style={styles.stat}>
-            <Text style={styles.statLabel}>Average </Text>
-            {formatWholeRupees(summary.averagePaise)}
-          </Text>
-          <Text style={styles.stat}>
-            <Text style={styles.statLabel}>Share </Text>
-            {summary.sharePct}%
-          </Text>
-        </View>
-      </View>
-
-      {isMerchant && key !== NO_MERCHANT ? (
-        <Card title="Category for all payments">
-          <View style={styles.chips}>
-            {categories.map((c) => (
-              <Button key={c.id} label={c.name} primary={c.id === merchantCategory} onPress={() => choose(c.id)} />
-            ))}
+    <SafeAreaView edges={['bottom']} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.header}>
+          <View style={[styles.avatar, { backgroundColor: visual.tint }]}>
+            {isMerchant ? (
+              <Text style={[styles.initial, { color: visual.color }]}>{title.charAt(0)}</Text>
+            ) : (
+              <Icon name={visual.icon} size={26} color={visual.color} />
+            )}
           </View>
-          <Text style={styles.hint}>
-            {moved === null
-              ? `Applies to every payment to ${title}, past and future.`
-              : moved === 0
-                ? `All payments are already in ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`
-                : `Moved ${moved} payment${moved === 1 ? '' : 's'} to ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`}
+          <View style={styles.flex}>
+            <Text style={styles.title} accessibilityRole="header">
+              {title}
+            </Text>
+            <Text style={styles.sub}>
+              {isMerchant ? `Merchant · ${names.get(merchantCategory) ?? 'Other'}` : 'Category'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.heroCaption}>
+            Spent {isMerchant ? 'here' : 'on this'} · {label}
           </Text>
+          <Text style={styles.heroTotal}>{formatWholeRupees(summary.spendPaise)}</Text>
+          <View style={styles.stats}>
+            <Text style={styles.stat}>
+              <Text style={styles.statLabel}>Payments </Text>
+              {summary.payments}
+            </Text>
+            <Text style={styles.stat}>
+              <Text style={styles.statLabel}>Average </Text>
+              {formatWholeRupees(summary.averagePaise)}
+            </Text>
+            <Text style={styles.stat}>
+              <Text style={styles.statLabel}>Share </Text>
+              {summary.sharePct}%
+            </Text>
+          </View>
+        </View>
+
+        {isMerchant && key !== NO_MERCHANT ? (
+          <Card title="Category for all payments">
+            <View style={styles.chips}>
+              {categories.map((c) => (
+                <Button key={c.id} label={c.name} primary={c.id === merchantCategory} onPress={() => choose(c.id)} />
+              ))}
+            </View>
+            <Text style={styles.hint}>
+              {moved === null
+                ? `Applies to every payment to ${title}, past and future.`
+                : moved === 0
+                  ? `All payments are already in ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`
+                  : `Moved ${moved} payment${moved === 1 ? '' : 's'} to ${names.get(merchantCategory) ?? 'Other'}. Future ones will follow.`}
+            </Text>
+          </Card>
+        ) : undefined}
+
+        <Card
+          title="Last 6 months"
+          aside={<Text style={styles.aside}>avg {formatWholeRupees(trendAverage(trend))}</Text>}
+        >
+          <TrendChart
+            height={64}
+            months={trend.map((m) => ({
+              key: m.month,
+              label: monthLabel(m.month),
+              amountPaise: m.amountPaise,
+              current: m.month === monthKey(range.start),
+            }))}
+            onSelect={pickMonth}
+          />
         </Card>
-      ) : undefined}
 
-      <Card
-        title="Last 6 months"
-        aside={<Text style={styles.aside}>avg {formatWholeRupees(trendAverage(trend))}</Text>}
-      >
-        <TrendChart
-          height={64}
-          months={trend.map((m) => ({
-            key: m.month,
-            label: monthLabel(m.month),
-            amountPaise: m.amountPaise,
-            current: m.month === monthKey(range.start),
-          }))}
-          onSelect={pickMonth}
-        />
-      </Card>
-
-      {isMerchant ? (
-        <View style={styles.listBlock}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>Payments · {label}</Text>
-            <Text style={styles.sectionLabel}>{shown.length}</Text>
-          </View>
-          {shown.length === 0 ? <Text style={styles.empty}>No payments in this range.</Text> : undefined}
-          <View style={styles.list}>
-            {shown.map((t, i) => (
-              <Pressable
-                key={t.id}
-                onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: t.id } })}
-                accessibilityRole="button"
-                style={[styles.payment, i < shown.length - 1 && styles.divider]}
-              >
-                <View style={styles.flex}>
-                  <Text style={styles.paymentTitle}>{dayLabel(t.occurredAt, now)}</Text>
-                  <Text style={styles.sub}>
-                    {[
-                      accountLabel(t.accountMask, accountNames, t.sourceSender),
-                      timeLabel(t.occurredAt),
-                      spendOf(t) === 0 ? 'not counted' : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+        {isMerchant ? (
+          <View style={styles.listBlock}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>Payments · {label}</Text>
+              <Text style={styles.sectionLabel}>{shown.length}</Text>
+            </View>
+            {shown.length === 0 ? <Text style={styles.empty}>No payments in this range.</Text> : undefined}
+            <View style={styles.list}>
+              {shown.map((t, i) => (
+                <Pressable
+                  key={t.id}
+                  onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: t.id } })}
+                  accessibilityRole="button"
+                  style={[styles.payment, i < shown.length - 1 && styles.divider]}
+                >
+                  <View style={styles.flex}>
+                    <Text style={styles.paymentTitle}>{dayLabel(t.occurredAt, now)}</Text>
+                    <Text style={styles.sub}>
+                      {[
+                        accountLabel(t.accountMask, accountNames, t.sourceSender),
+                        timeLabel(t.occurredAt),
+                        spendOf(t) === 0 ? 'not counted' : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.amount, t.direction === 'credit' && styles.credit]}>
+                    {t.direction === 'credit' ? '+' : ''}
+                    {formatRupees(t.amountPaise)}
                   </Text>
-                </View>
-                <Text style={[styles.amount, t.direction === 'credit' && styles.credit]}>
-                  {t.direction === 'credit' ? '+' : ''}
-                  {formatRupees(t.amountPaise)}
-                </Text>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
-      ) : (
-        <Card title={`Merchants · ${label}`}>
-          {merchantTotals(shown).map((m) => (
-            <MerchantRow
-              key={m.merchant}
-              {...m}
-              onPress={() => openBreakdown({ kind: 'merchant', key: m.merchant }, range, label)}
-            />
-          ))}
-        </Card>
-      )}
-    </ScrollView>
+        ) : (
+          <Card title={`Merchants · ${label}`}>
+            {merchantTotals(shown).map((m) => (
+              <MerchantRow
+                key={m.merchant}
+                {...m}
+                onPress={() => openBreakdown({ kind: 'merchant', key: m.merchant }, range, label)}
+              />
+            ))}
+          </Card>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   container: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14 },

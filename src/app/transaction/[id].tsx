@@ -2,6 +2,7 @@ import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SwitchRow } from '@/components/SwitchRow';
@@ -10,7 +11,7 @@ import { Icon } from '@/components/Icon';
 import { Text, TextInput } from '@/components/Text';
 import { Avatar } from '@/components/TransactionRow';
 import { repo } from '@/db/repo';
-import { newCategory } from '@/domain/categorize';
+import { mixedKeyFor, newCategory } from '@/domain/categorize';
 import { accountLabel, formatRupees, merchantLabel } from '@/domain/format';
 import { detailMeta } from '@/domain/listing';
 import type { Account, Category, RawSms, Transaction } from '@/domain/types';
@@ -30,6 +31,7 @@ export default function TransactionScreen() {
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [mixed, setMixed] = useState<string[]>([]);
   const [smsMessages, setSmsMessages] = useState<RawSms[]>([]);
   const [showSms, setShowSms] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -43,13 +45,19 @@ export default function TransactionScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [t, c, a] = await Promise.all([repo.getTransaction(id), repo.categories(), repo.accounts()]);
+      const [t, c, a, m] = await Promise.all([
+        repo.getTransaction(id),
+        repo.categories(),
+        repo.accounts(),
+        repo.mixedMerchants(),
+      ]);
       const sms = t && !t.isCash ? await repo.smsFor(t.sourceSmsIds) : [];
       if (cancelled) return;
       latest.current = t;
       setTxn(t);
       setCategories(c);
       setAccounts(a);
+      setMixed(m);
       setSmsMessages(sms);
     })().catch((e) => console.error('Loading transaction failed', e));
     return () => {
@@ -80,8 +88,10 @@ export default function TransactionScreen() {
   const choose = async (categoryId: string) => {
     if (!latest.current) return;
     await setCategory(latest.current, categoryId);
-    latest.current = { ...latest.current, categoryId };
+    latest.current = { ...latest.current, categoryId, unchecked: false };
     setTxn(latest.current);
+    // This choice may have just made the Merchant Mixed
+    setMixed(await repo.mixedMerchants());
   };
 
   const add = async () => {
@@ -102,121 +112,128 @@ export default function TransactionScreen() {
   const missingSms = txn.sourceSmsIds.length - smsMessages.length;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <Avatar txn={txn} size={56} />
-        <Text style={styles.merchant}>{merchantLabel(txn)}</Text>
-        <Text style={[styles.amount, txn.direction === 'credit' && styles.credit]}>
-          {txn.direction === 'credit' ? '+' : ''}
-          {formatRupees(txn.amountPaise)}
-        </Text>
-        <Text style={styles.meta}>{detailMeta(txn, account, Date.now())}</Text>
-      </View>
-
-      <Card title="Category">
-        <View style={styles.chips}>
-          {categories.map((c) => (
-            <Button key={c.id} label={c.name} primary={c.id === txn.categoryId} onPress={() => choose(c.id)} />
-          ))}
-          {adding ? undefined : <Button label="+ New" dashed onPress={() => setAdding(true)} />}
+    <SafeAreaView edges={['bottom']} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Avatar txn={txn} size={56} />
+          <Text style={styles.merchant}>{merchantLabel(txn)}</Text>
+          <Text style={[styles.amount, txn.direction === 'credit' && styles.credit]}>
+            {txn.direction === 'credit' ? '+' : ''}
+            {formatRupees(txn.amountPaise)}
+          </Text>
+          <Text style={styles.meta}>{detailMeta(txn, account, Date.now())}</Text>
         </View>
-        {adding ? (
-          <View style={styles.addRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="New Category"
-              autoFocus
-              value={newName}
-              onChangeText={setNewName}
-              onSubmitEditing={add}
-            />
-            <Button label="Add" primary onPress={add} />
-            <Button
-              label="Cancel"
-              onPress={() => {
-                setAdding(false);
-                setNewName('');
-                setError(null);
-              }}
-            />
+
+        <Card title="Category">
+          <View style={styles.chips}>
+            {categories.map((c) => (
+              <Button key={c.id} label={c.name} primary={c.id === txn.categoryId} onPress={() => choose(c.id)} />
+            ))}
+            {adding ? undefined : <Button label="+ New" dashed onPress={() => setAdding(true)} />}
           </View>
-        ) : undefined}
-        {error ? <Text style={styles.error}>{error}</Text> : undefined}
-        {txn.merchant && txn.direction === 'debit' ? (
-          <Text style={styles.hint}>Future payments to {merchantLabel(txn)} will use this Category.</Text>
-        ) : undefined}
-      </Card>
-
-      <Card title="Note">
-        <TextInput
-          style={[styles.input, styles.note]}
-          placeholder="Add a note"
-          accessibilityLabel="Note"
-          multiline
-          value={note ?? txn.note ?? ''}
-          onChangeText={(text) => {
-            setNote(text);
-            pendingNote.current = text;
-          }}
-          onBlur={() => pendingNote.current !== null && saveNote(pendingNote.current)}
-        />
-      </Card>
-
-      <Card style={styles.switches}>
-        <SwitchRow
-          label="Self-Transfer"
-          hint={
-            txn.selfTransferManual
-              ? 'Set by you, so re-scans leave it alone'
-              : 'Between your own Accounts — never counted'
-          }
-          value={txn.isSelfTransfer}
-          onChange={flipSelfTransfer}
-          divider
-        />
-        <SwitchRow
-          label="Exclude from totals"
-          hint="Hidden from the Dashboard and all totals"
-          value={txn.isExcluded}
-          onChange={() => save({ isExcluded: !txn.isExcluded })}
-        />
-      </Card>
-
-      {smsMessages.length > 0 ? (
-        <View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showSms }}
-            onPress={() => setShowSms(!showSms)}
-            style={styles.smsToggle}
-          >
-            <Text style={styles.smsToggleText}>
-              Original SMS · {smsMessages.length} message{smsMessages.length === 1 ? '' : 's'}
-            </Text>
-            <Icon name={showSms ? 'expand_less' : 'expand_more'} size={20} color={colors.muted} />
-          </Pressable>
-          {showSms
-            ? smsMessages.map((s) => (
-                <View key={s.id} style={styles.sms}>
-                  <Text style={styles.smsSender}>{s.sender}</Text>
-                  <Text style={styles.smsBody} selectable>
-                    {s.body}
-                  </Text>
-                </View>
-              ))
-            : undefined}
-          {showSms && missingSms > 0 ? (
+          {adding ? (
+            <View style={styles.addRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="New Category"
+                autoFocus
+                value={newName}
+                onChangeText={setNewName}
+                onSubmitEditing={add}
+              />
+              <Button label="Add" primary onPress={add} />
+              <Button
+                label="Cancel"
+                onPress={() => {
+                  setAdding(false);
+                  setNewName('');
+                  setError(null);
+                }}
+              />
+            </View>
+          ) : undefined}
+          {error ? <Text style={styles.error}>{error}</Text> : undefined}
+          {txn.merchant && txn.direction === 'debit' ? (
             <Text style={styles.hint}>
-              {missingSms} older message{missingSms === 1 ? ' wasn’t' : 's weren’t'} kept.
+              {mixedKeyFor(txn.merchant, mixed)
+                ? `You've used more than one Category for ${merchantLabel(txn)}, so you'll be asked each time.`
+                : `Future payments to ${merchantLabel(txn)} will use this Category.`}
             </Text>
           ) : undefined}
-        </View>
-      ) : undefined}
-    </ScrollView>
+        </Card>
+
+        <Card title="Note">
+          <TextInput
+            style={[styles.input, styles.note]}
+            placeholder="Add a note"
+            accessibilityLabel="Note"
+            multiline
+            value={note ?? txn.note ?? ''}
+            onChangeText={(text) => {
+              setNote(text);
+              pendingNote.current = text;
+            }}
+            onBlur={() => pendingNote.current !== null && saveNote(pendingNote.current)}
+          />
+        </Card>
+
+        <Card style={styles.switches}>
+          <SwitchRow
+            label="Self-Transfer"
+            hint={
+              txn.selfTransferManual
+                ? 'Set by you, so re-scans leave it alone'
+                : 'Between your own Accounts — never counted'
+            }
+            value={txn.isSelfTransfer}
+            onChange={flipSelfTransfer}
+            divider
+          />
+          <SwitchRow
+            label="Exclude from totals"
+            hint="Hidden from the Dashboard and all totals"
+            value={txn.isExcluded}
+            onChange={() => save({ isExcluded: !txn.isExcluded })}
+          />
+        </Card>
+
+        {smsMessages.length > 0 ? (
+          <View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showSms }}
+              onPress={() => setShowSms(!showSms)}
+              style={styles.smsToggle}
+            >
+              <Text style={styles.smsToggleText}>
+                Original SMS · {smsMessages.length} message{smsMessages.length === 1 ? '' : 's'}
+              </Text>
+              <Icon name={showSms ? 'expand_less' : 'expand_more'} size={20} color={colors.muted} />
+            </Pressable>
+            {showSms
+              ? smsMessages.map((s) => (
+                  <View key={s.id} style={styles.sms}>
+                    <Text style={styles.smsSender}>{s.sender}</Text>
+                    <Text style={styles.smsBody} selectable>
+                      {s.body}
+                    </Text>
+                  </View>
+                ))
+              : undefined}
+            {showSms && missingSms > 0 ? (
+              <Text style={styles.hint}>
+                {missingSms} older message{missingSms === 1 ? ' wasn’t' : 's weren’t'} kept.
+              </Text>
+            ) : undefined}
+          </View>
+        ) : undefined}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   container: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 16 },
   header: { alignItems: 'center', gap: 6, paddingBottom: 4 },

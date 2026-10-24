@@ -62,8 +62,8 @@ export function recategorizeMerchant(
   categoryId: string,
 ): { rule: MerchantRule; changed: Transaction[] } {
   const changed = merchantPayments(txns, merchant)
-    .filter((t) => t.categoryId !== categoryId)
-    .map((t) => ({ ...t, categoryId }));
+    .filter((t) => t.categoryId !== categoryId || t.unchecked)
+    .map((t) => ({ ...t, categoryId, unchecked: false }));
   return { rule: ruleForMerchant(merchant, categoryId), changed };
 }
 

@@ -16,6 +16,8 @@ const MIGRATIONS = [
   `CREATE TABLE sms_bodies (sms_id TEXT PRIMARY KEY NOT NULL, sms TEXT NOT NULL);`,
   // Every existing Account stays shown; hiding is always the user's choice
   `ALTER TABLE accounts ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;`,
+  // Merchants the user has put in more than one Category; they never have a Merchant Rule
+  `CREATE TABLE mixed_merchants (merchant TEXT PRIMARY KEY NOT NULL);`,
 ];
 
 let db: Promise<SQLite.SQLiteDatabase> | null = null;

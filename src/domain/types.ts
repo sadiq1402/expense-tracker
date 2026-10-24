@@ -38,6 +38,8 @@ export interface Transaction extends ParsedTxn {
   isRefund: boolean;
   isCash: boolean;
   accountId: string | null;
+  // Set on SMS Expenses awaiting the Category Check; rows stored before it read as checked
+  unchecked?: boolean;
 }
 
 export interface Category {

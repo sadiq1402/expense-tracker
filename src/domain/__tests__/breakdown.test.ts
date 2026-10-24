@@ -80,6 +80,11 @@ describe('recategorizeMerchant', () => {
     const txns = [txn({ id: 'r', merchant: 'AMAZON', categoryId: 'other', direction: 'credit', isRefund: true })];
     expect(recategorizeMerchant(txns, 'AMAZON', 'shopping').changed.map((t) => t.categoryId)).toEqual(['shopping']);
   });
+
+  test('answers any of the Merchant\'s Expenses still waiting for the Category Check', () => {
+    const txns = [txn({ id: 'w', merchant: 'SWIGGY', categoryId: 'food', unchecked: true })];
+    expect(recategorizeMerchant(txns, 'SWIGGY', 'food').changed.map((t) => [t.id, t.unchecked])).toEqual([['w', false]]);
+  });
 });
 
 describe('merchantPayments', () => {
